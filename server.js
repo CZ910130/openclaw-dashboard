@@ -1035,7 +1035,9 @@ function getServicesStatus() {
   const { execSync } = require('child_process');
   const services = ['openclaw', 'agent-dashboard', 'tailscaled'];
 
+  const safePattern = (s) => /^[\w.\-\\/\[\]:space()^$|+]+$/.test(s);
   const hasProcess = (pattern) => {
+    if (!safePattern(pattern)) return false;
     try {
       execSync(`pgrep -fa -- '${pattern}'`, { stdio: 'ignore', timeout: 3000 });
       return true;
@@ -1043,7 +1045,9 @@ function getServicesStatus() {
       return false;
     }
   };
+  const safeName = (s) => /^[\w.-]+$/.test(s);
   const isSystemdServiceActive = (name) => {
+    if (!safeName(name)) return false;
     for (const cmd of [
       `systemctl is-active --quiet ${name}`,
       `systemctl --user is-active --quiet ${name}`
@@ -1068,7 +1072,7 @@ function getServicesStatus() {
       },
       'agent-dashboard': {
         systemd: ['agent-dashboard'],
-        processes: ['dashboard-v2/server\\.js']
+        processes: ['agent-dashboard.*server\\.js', 'node.*server\\.js.*DASHBOARD']
       },
       tailscaled: {
         systemd: ['tailscaled'],
