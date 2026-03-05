@@ -1170,9 +1170,49 @@ body {
     transform: translateX(50px);
   }
 }
+body.light-theme {
+  --bg-primary: #f5f5f7;
+  --bg-secondary: #e8e8ed;
+  --bg-tertiary: #dcdce2;
+  --bg-card: #ffffff;
+  --border: #d1d1d6;
+  --text-primary: #1a1a1a;
+  --text-secondary: #4a4a4f;
+  --text-muted: #8e8e93;
+  --accent: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.15);
+  --green: #10b981;
+  --green-glow: rgba(16, 185, 129, 0.1);
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --purple: #a855f7;
+  --blue: #3b82f6;
+  --cyan: #06b6d4;
+}
+body.light-theme .sidebar { background: #eaeaef; border-right-color: #d1d1d6; }
+body.light-theme .status-bar { background: #eaeaef; border-top-color: #d1d1d6; }
+#themeToggle {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  z-index: 200;
+  transition: background 0.2s;
+}
+#themeToggle:hover { background: var(--bg-tertiary); }
 </style>
 </head>
 <body>
+<div id="themeToggle" onclick="toggleTheme()">🌙</div>
 
 <div id="loginPage" style="display:none;position:fixed;inset:0;background:var(--bg-primary);z-index:9999;align-items:center;justify-content:center;">
   <div style="max-width:400px;width:90%;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:40px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
@@ -5243,6 +5283,20 @@ setTimeout(() => {
   if (costs.perDay) calculateStreak();
   updatePageTitle();
 }, 2000);
+
+function toggleTheme() {
+  const btn = document.getElementById('themeToggle');
+  document.body.classList.toggle('light-theme');
+  const isLight = document.body.classList.contains('light-theme');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  btn.textContent = isLight ? '☀️' : '🌙';
+}
+(function() {
+  if (localStorage.getItem('theme') === 'light') {
+    document.body.classList.add('light-theme');
+    document.getElementById('themeToggle').textContent = '☀️';
+  }
+})();
 </script>
 </body>
 </html>
