@@ -1,9 +1,11 @@
 const http = require('http');
 const fs = require('fs');
+const fsp = fs.promises;
 const path = require('path');
 const os = require('os');
-const { exec } = require('child_process');
+const { exec, execFile } = require('child_process');
 const crypto = require('crypto');
+const zlib = require('zlib');
 
 const PORT = parseInt(process.env.DASHBOARD_PORT || '7000');
 const OPENCLAW_DIR = process.env.OPENCLAW_DIR || path.join(os.homedir(), '.openclaw');
@@ -29,8 +31,12 @@ const configFiles = [
 const workspaceFilenames = ['AGENTS.md','HEARTBEAT.md','IDENTITY.md','MEMORY.md','SOUL.md','TOOLS.md','USER.md'];
 const claudeUsageFile = path.join(dataDir, 'claude-usage.json');
 const geminiUsageFile = path.join(dataDir, 'gemini-usage.json');
+const glmUsageFile = path.join(dataDir, 'glm-usage.json');
+const kimiUsageFile = path.join(dataDir, 'kimi-usage.json');
 const scrapeScript = path.join(WORKSPACE_DIR, 'scripts', 'scrape-claude-usage.sh');
 const geminiScrapeScript = path.join(WORKSPACE_DIR, 'scripts', 'scrape-gemini-usage.sh');
+const glmScrapeScript = path.join(WORKSPACE_DIR, 'scripts', 'scrape-glm-usage.sh');
+const kimiScrapeScript = path.join(WORKSPACE_DIR, 'scripts', 'scrape-kimi-usage.sh');
 const pricingFile = path.join(WORKSPACE_DIR, 'data', 'model_pricing_usd_per_million.json');
 
 const htmlPath = path.join(__dirname, 'index.html');
@@ -45,7 +51,15 @@ const DEFAULT_MODEL_PRICING = {
   'openai/gpt-4.1-mini': { input: 0.40, output: 1.60, cacheRead: 0.20, cacheWrite: 0.80 },
   'google/gemini-3-pro-preview': { input: 1.25, output: 10.00, cacheRead: 0.31, cacheWrite: 4.50 },
   'google/gemini-3-flash-preview': { input: 0.15, output: 0.60, cacheRead: 0.04, cacheWrite: 0.15 },
-  'xai/grok-4-1-fast': { input: 0.20, output: 0.50, cacheRead: 0.05, cacheWrite: 0.20 }
+  'xai/grok-4-1-fast': { input: 0.20, output: 0.50, cacheRead: 0.05, cacheWrite: 0.20 },
+  // ZhipuAI (zai provider)
+  'zai/glm-5': { input: 0.5, output: 0.5, cacheRead: 0, cacheWrite: 0 },
+  'zai/glm-4.7': { input: 0.5, output: 0.5, cacheRead: 0, cacheWrite: 0 },
+  // Kimi (Moonshot)
+  'kimi-coding/k2p5': { input: 2.0, output: 10.0, cacheRead: 0, cacheWrite: 0 },
+  // MiniMax
+  'minimax/MiniMax-M2.5': { input: 0.3, output: 1.0, cacheRead: 0, cacheWrite: 0 },
+  'minimax/MiniMax-M2.1': { input: 0.3, output: 1.0, cacheRead: 0, cacheWrite: 0 }
 };
 
 function toNum(v) {
@@ -55,6 +69,29 @@ function toNum(v) {
 
 function normalizeProvider(provider) {
   return String(provider || 'unknown').trim().toLowerCase();
+}
+
+function parseCookies(req) {
+  const list = {};
+  const cookieHeader = req.headers.cookie;
+  if (!cookieHeader) return list;
+  cookieHeader.split(';').forEach(cookie => {
+    let [name, ...rest] = cookie.split('=');
+    name = name.trim();
+    if (!name) return;
+    const value = rest.join('=').trim();
+    if (!value) return;
+    list[name] = decodeURIComponent(value);
+  });
+  return list;
+}
+
+function safePath(base, requested) {
+  const resolved = path.resolve(base, requested);
+  if (!resolved.startsWith(path.resolve(base))) {
+    throw new Error('Path traversal attempt');
+  }
+  return resolved;
 }
 
 function normalizeModel(provider, model) {
@@ -77,6 +114,14 @@ function normalizeModel(provider, model) {
   if (p === 'google' && ml.startsWith('gemini-3-flash-preview')) return 'gemini-3-flash-preview';
   if (p === 'xai' && ml.startsWith('grok-4-1-fast')) return 'grok-4-1-fast';
   if (p === 'nvidia' && ml.includes('kimi-k2.5')) return 'moonshotai/kimi-k2.5';
+  // ZhipuAI models
+  if (p === 'zai' && ml.startsWith('glm-5')) return 'glm-5';
+  if (p === 'zai' && ml.startsWith('glm-4.7')) return 'glm-4.7';
+  // Kimi models
+  if (p === 'kimi-coding' && ml.includes('k2p5')) return 'k2p5';
+  // MiniMax models
+  if (p === 'minimax' && ml.includes('MiniMax-M2.5')) return 'MiniMax-M2.5';
+  if (p === 'minimax' && ml.includes('MiniMax-M2.1')) return 'MiniMax-M2.1';
   return m;
 }
 
@@ -301,13 +346,17 @@ function setSecurityHeaders(res) {
 }
 
 function setSameSiteCORS(req, res) {
-  const origin = req.headers.origin || req.headers.referer;
+  const origin = req.headers.origin;
   const host = req.headers.host;
-  if (origin && origin.includes(host)) {
+  const proto = req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+  const expectedOrigin = `${proto}://${host}`;
+  
+  if (origin === expectedOrigin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (!origin) {
-    const proto = req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-    res.setHeader('Access-Control-Allow-Origin', `${proto}://${host}`);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } else if (!origin && !req.headers.referer) {
+    res.setHeader('Access-Control-Allow-Origin', expectedOrigin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
 }
 
@@ -340,6 +389,100 @@ function clearFailedAuth(ip) {
   rateLimitStore.delete(ip);
 }
 
+// --- Gzip compression helper ---
+function sendCompressed(req, res, statusCode, contentType, body) {
+  const acceptEncoding = req.headers['accept-encoding'] || '';
+  if (acceptEncoding.includes('gzip') && Buffer.byteLength(body) > 1024) {
+    zlib.gzip(Buffer.from(body), (err, compressed) => {
+      if (err) {
+        res.writeHead(statusCode, { 'Content-Type': contentType });
+        res.end(body);
+        return;
+      }
+      res.writeHead(statusCode, {
+        'Content-Type': contentType,
+        'Content-Encoding': 'gzip',
+        'Vary': 'Accept-Encoding'
+      });
+      res.end(compressed);
+    });
+  } else {
+    res.writeHead(statusCode, { 'Content-Type': contentType });
+    res.end(body);
+  }
+}
+
+function sendJson(req, res, data, statusCode = 200) {
+  sendCompressed(req, res, statusCode, 'application/json', JSON.stringify(data));
+}
+
+// --- API rate limiting (all endpoints) ---
+const apiRateLimitStore = new Map();
+function checkApiRateLimit(ip) {
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+  const maxRequests = 120;
+  let entry = apiRateLimitStore.get(ip);
+  if (!entry || now - entry.windowStart > windowMs) {
+    entry = { windowStart: now, count: 1 };
+    apiRateLimitStore.set(ip, entry);
+    return { blocked: false };
+  }
+  entry.count++;
+  if (entry.count > maxRequests) {
+    const retryAfter = Math.ceil((entry.windowStart + windowMs - now) / 1000);
+    return { blocked: true, retryAfter };
+  }
+  return { blocked: false };
+}
+// Clean up stale entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of apiRateLimitStore) {
+    if (now - entry.windowStart > 120000) apiRateLimitStore.delete(ip);
+  }
+}, 300000).unref();
+
+// --- CSRF token management ---
+const csrfTokens = new Map();
+const CSRF_TOKEN_LIFETIME = 4 * 60 * 60 * 1000;
+
+function generateCsrfToken(sessionToken) {
+  const token = crypto.randomBytes(32).toString('hex');
+  csrfTokens.set(token, { sessionToken, createdAt: Date.now() });
+  return token;
+}
+
+function validateCsrfToken(req) {
+  const token = req.headers['x-csrf-token'];
+  if (!token) return false;
+  const entry = csrfTokens.get(token);
+  if (!entry) return false;
+  if (Date.now() - entry.createdAt > CSRF_TOKEN_LIFETIME) {
+    csrfTokens.delete(token);
+    return false;
+  }
+  return true;
+}
+
+function requireCsrf(req, res) {
+  if (!validateCsrfToken(req)) {
+    setSecurityHeaders(res);
+    res.writeHead(403, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Invalid or missing CSRF token' }));
+    return false;
+  }
+  return true;
+}
+
+// Clean up expired CSRF tokens every 30 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, entry] of csrfTokens) {
+    if (now - entry.createdAt > CSRF_TOKEN_LIFETIME) csrfTokens.delete(token);
+  }
+}, 30 * 60 * 1000).unref();
+
 function getClientIP(req) {
   return req.socket.remoteAddress || 'unknown';
 }
@@ -366,14 +509,23 @@ function httpsEnforcement(req, res) {
 }
 
 function isAuthenticated(req) {
-  const authHeader = req.headers.authorization;
-  let token = null;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7);
-  } else {
-    const url = new URL(req.url, 'http://localhost');
-    token = url.searchParams.get('token');
+  const cookies = parseCookies(req);
+  let token = cookies.session_token;
+  
+  if (!token) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      try {
+        const url = new URL(req.url, 'http://localhost');
+        token = url.searchParams.get('token');
+      } catch {
+        token = null;
+      }
+    }
   }
+  
   if (!token) return false;
   
   const session = sessions.get(token);
@@ -456,12 +608,35 @@ function resolveName(key) {
   return key.split(':').pop().substring(0, 12);
 }
 
-function getLastMessage(sessionId) {
+// --- Tail-read optimization: read last N bytes instead of entire file ---
+async function tailRead(filePath, bytes = 8192) {
+  try {
+    const stat = await fsp.stat(filePath);
+    if (stat.size === 0) return '';
+    const readBytes = Math.min(bytes, stat.size);
+    const buf = Buffer.alloc(readBytes);
+    const fh = await fsp.open(filePath, 'r');
+    try {
+      await fh.read(buf, 0, readBytes, stat.size - readBytes);
+    } finally {
+      await fh.close();
+    }
+    const chunk = buf.toString('utf8');
+    // Drop the first partial line (unless we read from the start)
+    if (readBytes < stat.size) {
+      const nl = chunk.indexOf('\n');
+      return nl >= 0 ? chunk.slice(nl + 1) : chunk;
+    }
+    return chunk;
+  } catch { return ''; }
+}
+
+async function getLastMessage(sessionId) {
   try {
     const filePath = path.join(sessDir, sessionId + '.jsonl');
-    if (!fs.existsSync(filePath)) return '';
-    const data = fs.readFileSync(filePath, 'utf8');
-    const lines = data.split('\n').filter(l => l.trim());
+    const tail = await tailRead(filePath, 16384);
+    if (!tail) return '';
+    const lines = tail.split('\n').filter(l => l.trim());
     for (let i = lines.length - 1; i >= Math.max(0, lines.length - 20); i--) {
       try {
         const d = JSON.parse(lines[i]);
@@ -518,30 +693,36 @@ function getSessionCost(sessionId) {
   return sessionCostCache[sessionId] || 0;
 }
 
-function getSessionsJson() {
+async function getSessionsJson() {
   try {
     const sFile = path.join(sessDir, 'sessions.json');
-    const data = JSON.parse(fs.readFileSync(sFile, 'utf8'));
-    return Object.entries(data).map(([key, s]) => ({
-      key,
-      label: s.label || resolveName(key),
-      model: s.modelOverride || s.model || '-',
-      totalTokens: s.totalTokens || 0,
-      contextTokens: s.contextTokens || 0,
-      kind: s.kind || (key.includes('group') ? 'group' : 'direct'),
-      updatedAt: s.updatedAt || 0,
-      createdAt: s.createdAt || s.updatedAt || 0,
-      aborted: s.abortedLastRun || false,
-      thinkingLevel: s.thinkingLevel || null,
-      channel: s.channel || '-',
-      sessionId: s.sessionId || '-',
-      lastMessage: getLastMessage(s.sessionId || key),
-      cost: getSessionCost(s.sessionId || key)
+    const raw = await fsp.readFile(sFile, 'utf8');
+    const data = JSON.parse(raw);
+    const entries = Object.entries(data);
+    const results = await Promise.all(entries.map(async ([key, s]) => {
+      const sid = s.sessionId || key;
+      return {
+        key,
+        label: s.label || resolveName(key),
+        model: s.modelOverride || s.model || '-',
+        totalTokens: s.totalTokens || 0,
+        contextTokens: s.contextTokens || 0,
+        kind: s.kind || (key.includes('group') ? 'group' : 'direct'),
+        updatedAt: s.updatedAt || 0,
+        createdAt: s.createdAt || s.updatedAt || 0,
+        aborted: s.abortedLastRun || false,
+        thinkingLevel: s.thinkingLevel || null,
+        channel: s.channel || '-',
+        sessionId: s.sessionId || '-',
+        lastMessage: await getLastMessage(sid),
+        cost: getSessionCost(sid)
+      };
     }));
+    return results;
   } catch (e) { return []; }
 }
 
-function getCostData() {
+async function getCostData() {
   try {
     const files = fs.readdirSync(sessDir).filter(f => isSessionFile(f));
     const perModel = {};
@@ -552,7 +733,8 @@ function getCostData() {
     for (const file of files) {
       const sid = extractSessionId(file);
       let scost = 0;
-      const lines = fs.readFileSync(path.join(sessDir, file), 'utf8').split('\n');
+      const content = await fsp.readFile(path.join(sessDir, file), 'utf8');
+      const lines = content.split('\n');
       for (const line of lines) {
         if (!line.trim()) continue;
         try {
@@ -585,70 +767,73 @@ function getCostData() {
       if (d >= weekAgo) weekCost += c;
     }
 
+    let sidLabels = {};
+    try {
+      const sData = JSON.parse(await fsp.readFile(path.join(sessDir, 'sessions.json'), 'utf8'));
+      for (const [key, val] of Object.entries(sData)) {
+        if (val.sessionId) sidLabels[val.sessionId] = val.label || key.split(':').slice(2).join(':');
+      }
+    } catch {}
+
+    const topSessions = Object.entries(perSession).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const perSessionResult = {};
+    for (const [sid, cost] of topSessions) {
+      let label = sidLabels[sid] || null;
+      if (!label) {
+        try {
+          const jf = path.join(sessDir, sid + '.jsonl');
+          let exists = fs.existsSync(jf);
+          if (!exists) {
+            const del = fs.readdirSync(sessDir).find(f => f.startsWith(sid) && f.includes('.deleted'));
+            if (del) { }
+          }
+          if (exists) {
+            const fileContent = await fsp.readFile(jf, 'utf8');
+            const flines = fileContent.split('\n');
+            for (const l of flines) {
+              if (!l.includes('"user"')) continue;
+              try {
+                const d = JSON.parse(l);
+                const c = d.message?.content;
+                const txt = typeof c === 'string' ? c : Array.isArray(c) ? c.find(x => x.type === 'text')?.text || '' : '';
+                if (txt) {
+                  let t = txt.replace(/\n/g, ' ').trim();
+                  const bgMatch = t.match(/background task "([^"]+)"/i);
+                  if (bgMatch) t = 'Sub: ' + bgMatch[1];
+                  const cronMatch = t.match(/\[cron:([^\]]+)\]/);
+                  if (cronMatch) {
+                    let cronName = cronMatch[1].substring(0, 8);
+                    try {
+                      const cj = JSON.parse(fs.readFileSync(cronFile, 'utf8'));
+                      const job = cj.jobs?.find(j => j.id?.startsWith(cronMatch[1].substring(0, 8)));
+                      if (job?.name) cronName = job.name;
+                    } catch {}
+                    t = 'Cron: ' + cronName;
+                  }
+                  if (t.startsWith('System:')) t = t.substring(7).trim();
+                  t = t.replace(/^\[\d{4}-\d{2}-\d{2}[^\]]*\]\s*/, '');
+                  if (t.startsWith('You are running a boot')) t = 'Boot check';
+                  if (t.match(/whatsapp/i)) t = 'WhatsApp session';
+                  const subMatch2 = t.match(/background task "([^"]+)"/i);
+                  if (!bgMatch && subMatch2) t = 'Sub: ' + subMatch2[1];
+                  label = t.substring(0, 35); if (t.length > 35) label += '…';
+                  break;
+                }
+              } catch {}
+            }
+          }
+        } catch {}
+      }
+      perSessionResult[sid] = { cost, label: label || ('session-' + sid.substring(0, 8)) };
+    }
+
     return {
       total: Math.round(total * 100) / 100,
       today: Math.round((perDay[todayKey] || 0) * 100) / 100,
       week: Math.round(weekCost * 100) / 100,
       perModel,
       perDay: Object.fromEntries(Object.entries(perDay).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 14)),
-      perSession: (() => {
-        let sidLabels = {};
-        try {
-          const sData = JSON.parse(fs.readFileSync(path.join(sessDir, 'sessions.json'), 'utf8'));
-          for (const [key, val] of Object.entries(sData)) {
-            if (val.sessionId) sidLabels[val.sessionId] = val.label || key.split(':').slice(2).join(':');
-          }
-        } catch {}
-        return Object.fromEntries(
-          Object.entries(perSession).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([sid, cost]) => {
-            let label = sidLabels[sid] || null;
-            if (!label) {
-              try {
-                const jf = path.join(sessDir, sid + '.jsonl');
-                if (!fs.existsSync(jf)) {
-                  const del = fs.readdirSync(sessDir).find(f => f.startsWith(sid) && f.includes('.deleted'));
-                  if (del) { }
-                }
-                if (fs.existsSync(jf)) {
-                  const lines = fs.readFileSync(jf, 'utf8').split('\n');
-                  for (const l of lines) {
-                    if (!l.includes('"user"')) continue;
-                    try {
-                      const d = JSON.parse(l);
-                      const c = d.message?.content;
-                      const txt = typeof c === 'string' ? c : Array.isArray(c) ? c.find(x => x.type === 'text')?.text || '' : '';
-                      if (txt) {
-                        let t = txt.replace(/\n/g, ' ').trim();
-                        const bgMatch = t.match(/background task "([^"]+)"/i);
-                        if (bgMatch) t = 'Sub: ' + bgMatch[1];
-                        const cronMatch = t.match(/\[cron:([^\]]+)\]/);
-                        if (cronMatch) {
-                          let cronName = cronMatch[1].substring(0, 8);
-                          try {
-                            const cj = JSON.parse(fs.readFileSync(cronFile, 'utf8'));
-                            const job = cj.jobs?.find(j => j.id?.startsWith(cronMatch[1].substring(0, 8)));
-                            if (job?.name) cronName = job.name;
-                          } catch {}
-                          t = 'Cron: ' + cronName;
-                        }
-                        if (t.startsWith('System:')) t = t.substring(7).trim();
-                        t = t.replace(/^\[\d{4}-\d{2}-\d{2}[^\]]*\]\s*/, '');
-                        if (t.startsWith('You are running a boot')) t = 'Boot check';
-                        if (t.match(/whatsapp/i)) t = 'WhatsApp session';
-                        const subMatch2 = t.match(/background task "([^"]+)"/i);
-                        if (!bgMatch && subMatch2) t = 'Sub: ' + subMatch2[1];
-                        label = t.substring(0, 35); if (t.length > 35) label += '…';
-                        break;
-                      }
-                    } catch {}
-                  }
-                }
-              } catch {}
-            }
-            return [sid, { cost, label: label || ('session-' + sid.substring(0, 8)) }];
-          })
-        );
-      })()
+      perSession: perSessionResult
     };
   } catch (e) { return { total: 0, today: 0, week: 0, perModel: {}, perDay: {}, perSession: {} }; }
 }
@@ -1041,11 +1226,11 @@ function broadcastLiveEvent(data) {
   });
 }
 
-function formatLiveEvent(data) {
+function formatLiveEvent(data, sessionsCache) {
   const timestamp = data.timestamp || new Date().toISOString();
   const sessionKey = data._sessionKey || data.sessionId || 'unknown';
-  
-  const sessions = getSessionsJson();
+
+  const sessions = sessionsCache || [];
   const session = sessions.find(s => s.sessionId === sessionKey || s.key.includes(sessionKey));
   const label = session ? session.label : sessionKey.substring(0, 8);
   
@@ -1541,7 +1726,12 @@ const server = http.createServer((req, res) => {
         clearFailedAuth(ip);
         auditLog('register', ip, { username });
         setSameSiteCORS(req, res);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        const cookieOptions = [`session_token=${sessionToken}`, 'HttpOnly', 'Path=/', 'SameSite=Lax'];
+        if (req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https') cookieOptions.push('Secure');
+        res.writeHead(200, { 
+          'Content-Type': 'application/json',
+          'Set-Cookie': cookieOptions.join('; ')
+        });
         res.end(JSON.stringify({ success: true, sessionToken }));
       } catch (e) {
         console.error('Registration error:', e);
@@ -1612,7 +1802,12 @@ const server = http.createServer((req, res) => {
         clearFailedAuth(ip);
         auditLog('login_success', ip, { username });
         setSameSiteCORS(req, res);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        const cookieOptions = [`session_token=${sessionToken}`, 'HttpOnly', 'Path=/', 'SameSite=Lax'];
+        if (req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https') cookieOptions.push('Secure');
+        res.writeHead(200, { 
+          'Content-Type': 'application/json',
+          'Set-Cookie': cookieOptions.join('; ')
+        });
         res.end(JSON.stringify({ success: true, sessionToken }));
       } catch (e) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -1630,7 +1825,10 @@ const server = http.createServer((req, res) => {
     }
     auditLog('logout', ip);
     setSameSiteCORS(req, res);
-    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.writeHead(200, { 
+      'Content-Type': 'application/json',
+      'Set-Cookie': 'session_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax'
+    });
     res.end(JSON.stringify({ success: true }));
     return;
   }
@@ -1860,6 +2058,23 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Serve extracted static assets
+  const staticFiles = {
+    '/styles.css': { file: path.join(__dirname, 'styles.css'), type: 'text/css' },
+    '/app.js': { file: path.join(__dirname, 'app.js'), type: 'application/javascript' }
+  };
+  if (staticFiles[req.url]) {
+    const { file, type } = staticFiles[req.url];
+    try {
+      const content = fs.readFileSync(file, 'utf8');
+      sendCompressed(req, res, 200, type, content);
+    } catch (e) {
+      res.writeHead(404);
+      res.end('Not found');
+    }
+    return;
+  }
+
   if (req.url === '/api/health') {
     setSecurityHeaders(res);
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1871,9 +2086,30 @@ const server = http.createServer((req, res) => {
     if (!requireAuth(req, res)) return;
     setSameSiteCORS(req, res);
 
+    // API rate limiting for all authenticated endpoints
+    const apiLimit = checkApiRateLimit(ip);
+    if (apiLimit.blocked) {
+      res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': String(apiLimit.retryAfter) });
+      res.end(JSON.stringify({ error: 'Too many requests', retryAfter: apiLimit.retryAfter }));
+      return;
+    }
+
+    // CSRF token endpoint - clients fetch a token before making state-changing requests
+    if (req.url === '/api/csrf-token' && req.method === 'GET') {
+      const cookies = parseCookies(req);
+      const token = generateCsrfToken(cookies.session_token || '');
+      sendJson(req, res, { csrfToken: token });
+      return;
+    }
+
+    // Enforce CSRF on state-changing methods (POST, PUT, DELETE) except auth endpoints
+    if ((req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE') &&
+        !req.url.startsWith('/api/auth/') && !req.url.startsWith('/api/reauth')) {
+      if (!requireCsrf(req, res)) return;
+    }
+
     if (req.url === '/api/sessions') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(getSessionsJson()));
+      getSessionsJson().then(data => sendJson(req, res, data));
       return;
     }
     if (req.url === '/api/usage') {
@@ -1882,25 +2118,26 @@ const server = http.createServer((req, res) => {
         usageCache = getUsageWindows();
         usageCacheTime = now;
       }
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(usageCache));
+      sendJson(req, res, usageCache);
       return;
     }
     if (req.url === '/api/costs') {
       const now = Date.now();
       if (!costCache || now - costCacheTime > 60000) {
-        costCache = getCostData();
-        costCacheTime = now;
+        getCostData().then(data => {
+          costCache = data;
+          costCacheTime = Date.now();
+          sendJson(req, res, costCache);
+        });
+      } else {
+        sendJson(req, res, costCache);
       }
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(costCache));
       return;
     }
     if (req.url === '/api/system') {
       const stats = getSystemStats();
       if (stats.disk) stats.diskHistory = trackDiskHistory(stats.disk.percent || 0);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(stats));
+      sendJson(req, res, stats);
       return;
     }
     if (req.url.startsWith('/api/session-messages?')) {
@@ -2110,7 +2347,7 @@ const server = http.createServer((req, res) => {
     if (req.url === '/api/claude-usage-scrape' && req.method === 'POST') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       if (fs.existsSync(scrapeScript)) {
-        exec(`bash ${scrapeScript}`, { timeout: 60000 }, (err) => {});
+        execFile('bash', [scrapeScript], { timeout: 60000 }, (err) => {});
         res.end(JSON.stringify({ status: 'started' }));
       } else {
         res.end(JSON.stringify({ status: 'error', message: 'Scrape script not found' }));
@@ -2130,7 +2367,7 @@ const server = http.createServer((req, res) => {
     if (req.url === '/api/gemini-usage-scrape' && req.method === 'POST') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       if (fs.existsSync(geminiScrapeScript)) {
-        exec(`bash ${geminiScrapeScript}`, { timeout: 60000 }, (err) => {});
+        execFile('bash', [geminiScrapeScript], { timeout: 60000 }, (err) => {});
         res.end(JSON.stringify({ status: 'started' }));
       } else {
         res.end(JSON.stringify({ status: 'error', message: 'Gemini scrape script not found' }));
@@ -2144,6 +2381,46 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify(data));
       } catch {
         res.end(JSON.stringify({ error: 'No usage data. Run scrape-gemini-usage.sh first.' }));
+      }
+      return;
+    }
+    if (req.url === '/api/glm-usage-scrape' && req.method === 'POST') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      if (fs.existsSync(glmScrapeScript)) {
+        execFile('bash', [glmScrapeScript], { timeout: 60000 }, (err) => {});
+        res.end(JSON.stringify({ status: 'started' }));
+      } else {
+        res.end(JSON.stringify({ status: 'error', message: 'GLM scrape script not found. API documentation needed.' }));
+      }
+      return;
+    }
+    if (req.url === '/api/glm-usage') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      try {
+        const data = JSON.parse(fs.readFileSync(glmUsageFile, 'utf8'));
+        res.end(JSON.stringify(data));
+      } catch {
+        res.end(JSON.stringify({ error: 'No usage data. GLM API usage endpoint documentation required.' }));
+      }
+      return;
+    }
+    if (req.url === '/api/kimi-usage-scrape' && req.method === 'POST') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      if (fs.existsSync(kimiScrapeScript)) {
+        execFile('bash', [kimiScrapeScript], { timeout: 60000 }, (err) => {});
+        res.end(JSON.stringify({ status: 'started' }));
+      } else {
+        res.end(JSON.stringify({ status: 'error', message: 'Kimi scrape script not found. API documentation needed.' }));
+      }
+      return;
+    }
+    if (req.url === '/api/kimi-usage') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      try {
+        const data = JSON.parse(fs.readFileSync(kimiUsageFile, 'utf8'));
+        res.end(JSON.stringify(data));
+      } catch {
+        res.end(JSON.stringify({ error: 'No usage data. Kimi API usage endpoint documentation required.' }));
       }
       return;
     }
@@ -2439,7 +2716,7 @@ const server = http.createServer((req, res) => {
         let fpath = '';
         if (fname === 'MEMORY.md') fpath = memoryMdPath;
         else if (fname === 'HEARTBEAT.md') fpath = heartbeatPath;
-        else if (fname.startsWith('memory/') && !fname.includes('..')) fpath = path.join(WORKSPACE_DIR, fname);
+        else if (fname.startsWith('memory/')) fpath = safePath(WORKSPACE_DIR, fname);
         else throw new Error('Invalid path');
         
         if (fs.existsSync(fpath)) {
