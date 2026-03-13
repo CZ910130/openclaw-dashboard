@@ -1,7 +1,9 @@
 const fs = require('fs');
+const fsp = fs.promises;
 const path = require('path');
+const zlib = require('zlib');
 const { execSync, exec } = require('child_process');
-const { sendJson, auditLog, getClientIP } = require('../lib/utils');
+const { sendJson, sendCompressed, auditLog, getClientIP } = require('../lib/utils');
 
 function setupApiRoutes(req, res, options) {
   const { 
@@ -147,6 +149,97 @@ function setupApiRoutes(req, res, options) {
       } catch {}
     }
     sendJson(req, res, files);
+    return true;
+  }
+
+  // --- Export Sessions ---
+  if (req.url.startsWith('/api/export/sessions')) {
+    const params = new URL(req.url, 'http://localhost').searchParams;
+    const format = params.get('format') || 'json';
+
+    try {
+      const sessFile = path.join(sessDir, 'sessions.json');
+      if (!fs.existsSync(sessFile)) { sendJson(req, res, { error: 'No sessions data' }, 404); return true; }
+      const data = JSON.parse(fs.readFileSync(sessFile, 'utf8'));
+      const entries = Object.entries(data).map(([key, s]) => ({
+        key,
+        label: s.label || key.split(':').pop(),
+        model: s.modelOverride || s.model || '-',
+        totalTokens: s.totalTokens || 0,
+        contextTokens: s.contextTokens || 0,
+        kind: s.kind || 'direct',
+        updatedAt: s.updatedAt ? new Date(s.updatedAt).toISOString() : '',
+        createdAt: s.createdAt ? new Date(s.createdAt).toISOString() : '',
+        sessionId: s.sessionId || '-',
+        channel: s.channel || '-'
+      }));
+
+      if (format === 'csv') {
+        const headers = ['key', 'label', 'model', 'totalTokens', 'contextTokens', 'kind', 'updatedAt', 'createdAt', 'sessionId', 'channel'];
+        const csvRows = [headers.join(',')];
+        for (const entry of entries) {
+          csvRows.push(headers.map(h => {
+            const val = String(entry[h] || '');
+            return val.includes(',') || val.includes('"') ? `"${val.replace(/"/g, '""')}"` : val;
+          }).join(','));
+        }
+        const csvBody = csvRows.join('\n');
+        res.setHeader('Content-Disposition', 'attachment; filename="sessions-export.csv"');
+        sendCompressed(req, res, 200, 'text/csv', csvBody);
+      } else {
+        const jsonBody = JSON.stringify(entries, null, 2);
+        res.setHeader('Content-Disposition', 'attachment; filename="sessions-export.json"');
+        sendCompressed(req, res, 200, 'application/json', jsonBody);
+      }
+      auditLog(auditLogPath, 'export_sessions', ip, { format });
+    } catch (e) { sendJson(req, res, { error: 'Export failed: ' + e.message }, 500); }
+    return true;
+  }
+
+  // --- Backup ---
+  if (req.url === '/api/backup' && req.method === 'POST') {
+    try {
+      const backupData = {
+        timestamp: new Date().toISOString(),
+        version: '1.0',
+        workspace: {}
+      };
+
+      // Backup workspace config files
+      for (const fname of workspaceFilenames) {
+        const fpath = path.join(WORKSPACE_DIR, fname);
+        try {
+          if (fs.existsSync(fpath)) backupData.workspace[fname] = fs.readFileSync(fpath, 'utf8');
+        } catch {}
+      }
+
+      // Backup memory files
+      backupData.memory = {};
+      try {
+        if (fs.existsSync(memoryDir)) {
+          const entries = fs.readdirSync(memoryDir).filter(f => f.endsWith('.md'));
+          for (const e of entries) {
+            try { backupData.memory[e] = fs.readFileSync(path.join(memoryDir, e), 'utf8'); } catch {}
+          }
+        }
+      } catch {}
+
+      // Backup cron config
+      try {
+        if (fs.existsSync(cronFile)) backupData.crons = JSON.parse(fs.readFileSync(cronFile, 'utf8'));
+      } catch {}
+
+      // Backup sessions metadata
+      const sessFile = path.join(sessDir, 'sessions.json');
+      try {
+        if (fs.existsSync(sessFile)) backupData.sessions = JSON.parse(fs.readFileSync(sessFile, 'utf8'));
+      } catch {}
+
+      const body = JSON.stringify(backupData, null, 2);
+      res.setHeader('Content-Disposition', `attachment; filename="openclaw-backup-${new Date().toISOString().split('T')[0]}.json"`);
+      sendCompressed(req, res, 200, 'application/json', body);
+      auditLog(auditLogPath, 'backup_created', ip);
+    } catch (e) { sendJson(req, res, { error: 'Backup failed: ' + e.message }, 500); }
     return true;
   }
 
