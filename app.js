@@ -559,8 +559,8 @@ async function getCsrfToken() {
   const res = await fetch(API_BASE + '/api/csrf-token', { credentials: 'include' });
   if (!res.ok) throw new Error('Failed to get CSRF token');
   const data = await res.json();
-  _csrfToken = data.token;
-  _csrfExpiry = now + (data.expiresIn || 14400000);
+  _csrfToken = data.csrfToken || data.token;
+  _csrfExpiry = now + (data.expiresIn || 4 * 60 * 60 * 1000);
   return _csrfToken;
 }
 
