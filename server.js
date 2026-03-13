@@ -284,8 +284,14 @@ const server = http.createServer((req, res) => {
     res.writeHead(404); res.end('Not found'); return;
   }
 
+  // Dev mode endpoints (no auth required for hot-reload SSE)
+  if (handleHotReloadSSE(req, res)) return;
+
   // Protected API Routes
   if (req.url.startsWith('/api/')) {
+    // API docs available without auth
+    if (handleApiDocs(req, res)) return;
+
     if (!requireAuth(req, res)) return;
 
     if (setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir)) return;
@@ -329,4 +335,8 @@ const server = http.createServer((req, res) => {
   }
 });
 
-server.listen(PORT, '0.0.0.0', () => { console.log('Dashboard: http://0.0.0.0:' + PORT); });
+server.listen(PORT, '0.0.0.0', () => {
+  console.log('Dashboard: http://0.0.0.0:' + PORT);
+  console.log('  📄 API docs: http://0.0.0.0:' + PORT + '/api/docs');
+  if (IS_DEV) console.log('  🔧 Dev mode: enabled (DASHBOARD_DEV=true or NODE_ENV=development)');
+});
