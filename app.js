@@ -28,6 +28,30 @@ document.addEventListener('click', function(e) {
 });
 
 const API_BASE = getApiBasePath();
+
+// Page Visibility API: pause polling when tab is hidden, resume when visible
+const _visibleIntervals = [];
+function visibleInterval(fn, ms) {
+  const entry = { fn, ms, id: setInterval(fn, ms) };
+  _visibleIntervals.push(entry);
+  return entry;
+}
+function clearVisibleInterval(entry) {
+  if (!entry) return;
+  clearInterval(entry.id);
+  const idx = _visibleIntervals.indexOf(entry);
+  if (idx !== -1) _visibleIntervals.splice(idx, 1);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    _visibleIntervals.forEach(e => { clearInterval(e.id); e.id = null; });
+  } else {
+    _visibleIntervals.forEach(e => {
+      if (!e.id) { e.fn(); e.id = setInterval(e.fn, e.ms); }
+    });
+  }
+});
+
 let sysSecAuthed = false;
 const TOKEN_KEY = 'dashboardToken';
 const TOKEN_EXPIRY_KEY = 'dashboardTokenExpiry';
@@ -420,11 +444,11 @@ function showApp() {
     const cb = document.getElementById('usageAutoRefresh');
     if (cb) { cb.checked = true; toggleUsageAutoRefresh(true, true); }
   }
-  setInterval(fetchData, 5000);
-  setInterval(fetchNewData, 15000);
-  setInterval(fetchHealthHistory, 60000);
-  setInterval(fetchMemoryFiles, 30000);
-  setInterval(fetchKeyFiles, 30000);
+  visibleInterval(fetchData, 5000);
+  visibleInterval(fetchNewData, 15000);
+  visibleInterval(fetchHealthHistory, 60000);
+  visibleInterval(fetchMemoryFiles, 30000);
+  visibleInterval(fetchKeyFiles, 30000);
 }
 
 function showLogin() {
@@ -1303,7 +1327,7 @@ let sessionSearch = '';
 let modelFilter = 'all';
 let dateRange = '7d';
 let expandedSessionKey = null;
-let _msgPollTimer = null;
+let _msgPollEntry = null;
 
 function refreshExpandedMessages(key) {
   const s = sessions.find(x => x.key === key);
@@ -1329,10 +1353,11 @@ function refreshExpandedMessages(key) {
 
 function startMsgPoll(key) {
   stopMsgPoll();
-  _msgPollTimer = setInterval(() => refreshExpandedMessages(key), 5000);
+  _msgPollEntry = visibleInterval(() => refreshExpandedMessages(key), 5000);
 }
 function stopMsgPoll() {
-  if (_msgPollTimer) { clearInterval(_msgPollTimer); _msgPollTimer = null; }
+  clearVisibleInterval(_msgPollEntry);
+  _msgPollEntry = null;
 }
 
 document.querySelectorAll('#statusFilters .chip').forEach(chip => {
@@ -1616,7 +1641,7 @@ async function fetchClaudeUsage() {
   } catch {}
 }
 
-let _usageAutoInterval = null;
+let _usageAutoEntry = null;
 
 function toggleUsageAutoRefresh(on, init) {
   if (!init) localStorage.setItem('usageAutoRefresh', on ? '1' : '0');
@@ -1628,15 +1653,16 @@ function toggleUsageAutoRefresh(on, init) {
     thumb.style.left = '18px';
     label.textContent = 'Auto ✓';
     label.style.color = 'var(--green)';
-    // Scrape immediately, then every 30 min
+    // Scrape immediately, then every 2 min
     scrapeCurrentProvider();
-    _usageAutoInterval = setInterval(scrapeCurrentProvider, 120000);
+    _usageAutoEntry = visibleInterval(scrapeCurrentProvider, 120000);
   } else {
     track.style.background = 'var(--bg-tertiary)';
     thumb.style.left = '2px';
     label.textContent = 'Auto';
     label.style.color = 'var(--text-muted)';
-    if (_usageAutoInterval) { clearInterval(_usageAutoInterval); _usageAutoInterval = null; }
+    clearVisibleInterval(_usageAutoEntry);
+    _usageAutoEntry = null;
   }
 }
 
@@ -1745,7 +1771,7 @@ async function scrapeKimiUsage() {
   const btn2 = document.getElementById('overviewScrapeBtn');
   if (btn) { btn.textContent = '⏳ Refreshing...'; btn.disabled = true; }
   if (btn2) { btn2.textContent = '⏳'; btn2.disabled = true; }
-  if (label && _usageAutoInterval) label.textContent = '⏳...';
+  if (label && _usageAutoEntry) label.textContent = '⏳...';
   try {
     await authFetch(API_BASE + '/api/claude-usage-scrape', { method: 'POST' });
     // Poll until data changes or timeout
@@ -1760,12 +1786,12 @@ async function scrapeKimiUsage() {
   } catch {} finally {
     if (btn) { btn.textContent = '⟳ Refresh'; btn.disabled = false; }
     if (btn2) { btn2.textContent = '⟳'; btn2.disabled = false; }
-    if (label && _usageAutoInterval) label.textContent = 'Auto ✓';
+    if (label && _usageAutoEntry) label.textContent = 'Auto ✓';
   }
 }
 
 fetchClaudeUsage();
-setInterval(fetchClaudeUsage, 60000);
+visibleInterval(fetchClaudeUsage, 60000);
 
 let _cachedGeminiUsage = null;
 let _currentProvider = localStorage.getItem('usageProvider') || 'claude';
@@ -1812,7 +1838,7 @@ async function scrapeGeminiUsage() {
   const label = document.getElementById('usageAutoLabel');
   if (btn) { btn.textContent = '⏳ Refreshing...'; btn.disabled = true; }
   if (btn2) { btn2.textContent = '⏳'; btn2.disabled = true; }
-  if (label && _usageAutoInterval) label.textContent = '⏳...';
+  if (label && _usageAutoEntry) label.textContent = '⏳...';
   try {
     await authFetch(API_BASE + '/api/gemini-usage-scrape', { method: 'POST' });
     const oldTs = (_cachedGeminiUsage && _cachedGeminiUsage.scraped_at) || '';
@@ -1825,7 +1851,7 @@ async function scrapeGeminiUsage() {
   } catch {} finally {
     if (btn) { btn.textContent = '⟳ Refresh'; btn.disabled = false; }
     if (btn2) { btn2.textContent = '⟳'; btn2.disabled = false; }
-    if (label && _usageAutoInterval) label.textContent = 'Auto ✓';
+    if (label && _usageAutoEntry) label.textContent = 'Auto ✓';
   }
 }
 
@@ -1947,9 +1973,9 @@ function switchProvider(prov) {
     if (typeof updateOverviewKimi === 'function') updateOverviewKimi();
   }
   
-  if (_usageAutoInterval) {
-    clearInterval(_usageAutoInterval);
-    _usageAutoInterval = setInterval(scrapeCurrentProvider, 120000);
+  if (_usageAutoEntry) {
+    clearVisibleInterval(_usageAutoEntry);
+    _usageAutoEntry = visibleInterval(scrapeCurrentProvider, 120000);
   }
 }
 
@@ -1959,8 +1985,8 @@ function scrapeCurrentProvider() {
   else if (_currentProvider === 'kimi' && typeof scrapeKimiUsage === 'function') scrapeKimiUsage();
 }
 
-if (typeof fetchGLMUsage === 'function') { fetchGLMUsage(); setInterval(fetchGLMUsage, 60000); }
-if (typeof fetchKimiUsage === 'function') { fetchKimiUsage(); setInterval(fetchKimiUsage, 60000); }
+if (typeof fetchGLMUsage === 'function') { fetchGLMUsage(); visibleInterval(fetchGLMUsage, 60000); }
+if (typeof fetchKimiUsage === 'function') { fetchKimiUsage(); visibleInterval(fetchKimiUsage, 60000); }
 switchProvider(_currentProvider);
 
 function getProgressColor(pct) {
@@ -3270,7 +3296,7 @@ function calculateStreak() {
 }
 
 // Logs Viewer
-let logAutoRefreshInterval = null;
+let logAutoRefreshEntry = null;
 
 async function fetchLogs() {
   const service = document.getElementById('logService').value;
@@ -3299,14 +3325,12 @@ async function fetchLogs() {
 }
 
 function toggleLogAutoRefresh(enabled) {
-  if (logAutoRefreshInterval) {
-    clearInterval(logAutoRefreshInterval);
-    logAutoRefreshInterval = null;
-  }
-  
+  clearVisibleInterval(logAutoRefreshEntry);
+  logAutoRefreshEntry = null;
+
   if (enabled) {
     fetchLogs();
-    logAutoRefreshInterval = setInterval(fetchLogs, 5000);
+    logAutoRefreshEntry = visibleInterval(fetchLogs, 5000);
   }
 }
 
@@ -3401,11 +3425,11 @@ toggleSessionExpand = function(key, e) {
 fetchTailscaleStatus();
 fetchLifetimeStats();
 
-// Periodic updates
-setInterval(fetchTailscaleStatus, 30000);
-setInterval(fetchLifetimeStats, 60000);
-setInterval(updatePageTitle, 5000);
-setInterval(() => { if (costs.perDay) calculateStreak(); }, 10000);
+// Periodic updates (paused when tab is hidden)
+visibleInterval(fetchTailscaleStatus, 30000);
+visibleInterval(fetchLifetimeStats, 60000);
+visibleInterval(updatePageTitle, 5000);
+visibleInterval(() => { if (costs.perDay) calculateStreak(); }, 10000);
 
 // Initial calls
 setTimeout(() => {
@@ -3642,7 +3666,7 @@ async function checkNewNotifications() {
     }
   } catch {}
 }
-setInterval(checkNewNotifications, 30000);
+visibleInterval(checkNewNotifications, 30000);
 setTimeout(checkNewNotifications, 3000);
 document.addEventListener('click', (e) => {
   const panel = document.getElementById('notifPanel');
