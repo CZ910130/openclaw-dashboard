@@ -3750,4 +3750,3 @@ async function dockerAction(action, id) {
     loadDocker();
   } catch(e) { showToast('Error: ' + e.message, 'warning'); }
 }
-</script>
