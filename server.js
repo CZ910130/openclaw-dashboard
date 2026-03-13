@@ -10,9 +10,13 @@ const context = require('./lib/context');
 const utils = require('./lib/utils');
 const auth = require('./lib/auth');
 const stats = require('./lib/stats');
+const { initStaticCache, serveStatic, trackRequest, getApiStats } = require('./lib/middleware');
 const { setupUsageRoutes } = require('./routes/usage');
 const { setupSystemRoutes } = require('./routes/system');
 const { setupApiRoutes } = require('./routes/api');
+
+// Pre-compress and cache static files
+initStaticCache(__dirname);
 
 const {
   PORT, WORKSPACE_DIR, dataDir, sessDir, cronFile, auditLogPath, credentialsFile, mfaSecretFile
@@ -224,6 +228,9 @@ const server = http.createServer((req, res) => {
   setSecurityHeaders(res);
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
 
+  // Request timing & API stats
+  trackRequest(req, res);
+
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
@@ -261,18 +268,18 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Static files
+  // Static files (served from pre-compressed cache)
   if (req.url === '/' || req.url === '/index.html') {
-    try { res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(fs.readFileSync(path.join(__dirname, 'index.html'))); } catch { res.writeHead(500); res.end('Error'); }
-    return;
+    if (serveStatic(req, res, 'index.html')) return;
+    res.writeHead(500); res.end('Error'); return;
   }
   if (req.url === '/styles.css') {
-    try { res.writeHead(200, { 'Content-Type': 'text/css' }); res.end(fs.readFileSync(path.join(__dirname, 'styles.css'))); } catch { res.writeHead(404); res.end('Not found'); }
-    return;
+    if (serveStatic(req, res, 'styles.css')) return;
+    res.writeHead(404); res.end('Not found'); return;
   }
   if (req.url === '/app.js') {
-    try { res.writeHead(200, { 'Content-Type': 'application/javascript' }); res.end(fs.readFileSync(path.join(__dirname, 'app.js'))); } catch { res.writeHead(404); res.end('Not found'); }
-    return;
+    if (serveStatic(req, res, 'app.js')) return;
+    res.writeHead(404); res.end('Not found'); return;
   }
 
   // Protected API Routes
@@ -282,6 +289,11 @@ const server = http.createServer((req, res) => {
     if (setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir)) return;
     if (setupSystemRoutes(req, res, { auditLogPath, ip })) return;
     if (setupApiRoutes(req, res, context)) return;
+
+    if (req.url === '/api/stats') {
+      sendJson(req, res, getApiStats());
+      return;
+    }
 
     if (req.url === '/api/live') {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
