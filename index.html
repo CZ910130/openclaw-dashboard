@@ -12,22 +12,22 @@
 </head>
 <body>
 <!-- Mobile Top Bar -->
-<div class="top-bar">
+<header class="top-bar" role="banner">
   <div class="top-bar-left">
-    <div class="mobile-menu-btn" onclick="toggleMobileSidebar()">☰</div>
+    <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidebar">☰</button>
     <span class="brand" style="font-size:14px;font-weight:600;background:linear-gradient(135deg, var(--text-primary), var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Agent</span>
   </div>
   <div class="top-bar-right">
-    <div id="themeToggle" onclick="toggleTheme()">🌙</div>
-    <div class="notification-bell" id="notificationBellMobile" onclick="toggleNotifPanel()" title="Notifications">🔔<span class="notification-badge" id="notifBadgeMobile">0</span></div>
+    <button id="themeToggle" onclick="toggleTheme()" aria-label="Toggle dark/light theme">🌙</button>
+    <button class="notification-bell" id="notificationBellMobile" onclick="toggleNotifPanel()" aria-label="Notifications">🔔<span class="notification-badge" id="notifBadgeMobile" aria-live="polite">0</span></button>
   </div>
-</div>
+</header>
 
-<div class="mobile-menu-btn" onclick="toggleMobileSidebar()">☰</div>
+<button class="mobile-menu-btn" onclick="toggleMobileSidebar()" aria-label="Toggle navigation menu">☰</button>
 
-<div id="themeToggle" onclick="toggleTheme()">🌙</div>
+<button id="themeToggle" onclick="toggleTheme()" aria-label="Toggle dark/light theme">🌙</button>
 
-<div id="loginPage" style="display:none;position:fixed;inset:0;background:var(--bg-primary);z-index:9999;align-items:center;justify-content:center;">
+<div id="loginPage" role="dialog" aria-label="Authentication" style="display:none;position:fixed;inset:0;background:var(--bg-primary);z-index:9999;align-items:center;justify-content:center;">
   <div style="max-width:400px;width:90%;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:40px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
     <div style="text-align:center;margin-bottom:32px;">
       <div style="font-size:48px;margin-bottom:16px;">🔐</div>
@@ -95,65 +95,65 @@
 </div>
 
 <div class="app" id="mainApp" style="display:none;">
-  <aside class="sidebar" id="sidebar">
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
     <div class="sidebar-header">
-      <div class="logo">✨</div>
+      <div class="logo" aria-hidden="true">✨</div>
       <div class="brand">Agent</div>
     </div>
-    <nav class="nav">
-      <div class="nav-item active" data-page="overview">
-        <span class="icon">📊</span>
+    <nav class="nav" aria-label="Dashboard pages">
+      <div class="nav-item active" data-page="overview" role="button" tabindex="0" aria-current="page">
+        <span class="icon" aria-hidden="true">📊</span>
         <span class="nav-text">Overview</span>
       </div>
-      <div class="nav-item" data-page="sessions">
-        <span class="icon">🤖</span>
+      <div class="nav-item" data-page="sessions" role="button" tabindex="0">
+        <span class="icon" aria-hidden="true">🤖</span>
         <span class="nav-text">Sessions</span>
       </div>
-      <div class="nav-item" data-page="costs">
-        <span class="icon">💰</span>
+      <div class="nav-item" data-page="costs" role="button" tabindex="0">
+        <span class="icon" aria-hidden="true">💰</span>
         <span class="nav-text">Costs</span>
       </div>
-      <div class="nav-item" data-page="limits">
-        <span class="icon">📈</span>
+      <div class="nav-item" data-page="limits" role="button" tabindex="0">
+        <span class="icon" aria-hidden="true">📈</span>
         <span class="nav-text">Limits</span>
       </div>
-      <div class="nav-item" data-page="memory">
-        <span class="icon">🧠</span>
+      <div class="nav-item" data-page="memory" role="button" tabindex="0">
+        <span class="icon" aria-hidden="true">🧠</span>
         <span class="nav-text">Memory</span>
       </div>
-      <div class="nav-item" data-page="files">
-        <span class="icon">📁</span>
+      <div class="nav-item" data-page="files" role="button" tabindex="0">
+        <span class="icon" aria-hidden="true">📁</span>
         <span class="nav-text">Files</span>
       </div>
-      <div class="nav-item" data-page="logs">
-        <span class="icon">📋</span>
+      <div class="nav-item" data-page="logs" role="button" tabindex="0">
+        <span class="icon" aria-hidden="true">📋</span>
         <span class="nav-text">Logs</span>
       </div>
-      <div class="nav-item" data-page="feed">
-        <span class="icon">⚡</span>
+      <div class="nav-item" data-page="feed" role="button" tabindex="0">
+        <span class="icon" aria-hidden="true">⚡</span>
         <span class="nav-text">Live Feed</span>
       </div>
-      <div class="nav-item" data-page="security">
-        <span class="icon">🔒</span>
+      <div class="nav-item" data-page="security" role="button" tabindex="0">
+        <span class="icon" aria-hidden="true">🔒</span>
         <span class="nav-text">Security</span>
       </div>
-      <div class="nav-item" data-page="sys-security">
-        <span class="icon">🛡️</span>
+      <div class="nav-item" data-page="sys-security" role="button" tabindex="0">
+        <span class="icon" aria-hidden="true">🛡️</span>
         <span class="nav-text">Sys Security</span>
       </div>
-      <div class="nav-item" data-page="config-editor">
-        <span class="icon">⚙️</span>
+      <div class="nav-item" data-page="config-editor" role="button" tabindex="0">
+        <span class="icon" aria-hidden="true">⚙️</span>
         <span class="nav-text">Config</span>
       </div>
-      <div class="nav-item" data-page="docker">
-        <span class="icon">🐳</span>
+      <div class="nav-item" data-page="docker" role="button" tabindex="0">
+        <span class="icon" aria-hidden="true">🐳</span>
         <span class="nav-text">Docker</span>
       </div>
     </nav>
     <div style="padding:16px;border-top:1px solid var(--border);margin-top:auto;">
-      <div id="mfaStatusIndicator" style="padding:4px 8px;margin-bottom:8px;font-size:10px;text-align:center;border-radius:6px;display:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-      <div class="nav-item" onclick="handleLogout()" style="color:var(--red);margin-bottom:0;">
-        <span class="icon">🚪</span>
+      <div id="mfaStatusIndicator" role="status" style="padding:4px 8px;margin-bottom:8px;font-size:10px;text-align:center;border-radius:6px;display:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+      <div class="nav-item" onclick="handleLogout()" role="button" tabindex="0" style="color:var(--red);margin-bottom:0;">
+        <span class="icon" aria-hidden="true">🚪</span>
         <span class="nav-text">Logout</span>
       </div>
     </div>
@@ -161,7 +161,7 @@
 
   <main class="main">
     
-    <div class="page active" id="overview">
+    <section class="page active" id="overview" aria-label="Overview">
       <div class="page-header">
         <h1 class="page-title">Overview</h1>
         <p class="page-subtitle">Agent activity and system performance</p>
@@ -391,9 +391,9 @@
           <div id="sessionModels" style="max-height:300px;overflow-y:auto;"></div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="page" id="sessions">
+    <section class="page" id="sessions" aria-label="Sessions">
       <div class="page-header">
         <h1 class="page-title">Sessions</h1>
         <p class="page-subtitle">All agent sessions and their activity</p>
@@ -462,9 +462,9 @@
         </div>
         <div id="sessionsTableBody"></div>
       </div>
-    </div>
+    </section>
 
-    <div class="page" id="limits">
+    <section class="page" id="limits" aria-label="Rate Limits">
       <div class="page-header">
         <h1 class="page-title">Rate Limits</h1>
         <p class="page-subtitle">Claude Max 5x · 5-hour rolling usage windows</p>
@@ -647,9 +647,9 @@
         <h3 class="card-title">Recent API Calls</h3>
         <div id="recentCalls" style="max-height:360px;overflow-y:auto;"></div>
       </div>
-    </div>
+    </section>
 
-    <div class="page" id="costs">
+    <section class="page" id="costs" aria-label="Costs">
       <div class="page-header">
         <h1 class="page-title">Costs</h1>
         <p class="page-subtitle">Spending breakdown and trends</p>
@@ -697,9 +697,9 @@
           <div id="topSessions"></div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="page" id="feed">
+    <section class="page" id="feed" aria-label="Live Feed">
       <div class="page-header">
         <h1 class="page-title">Live Feed</h1>
         <p class="page-subtitle">Real-time agent activity stream — all sessions</p>
@@ -726,11 +726,11 @@
       </div>
 
       <div class="card">
-        <div class="feed-stream" id="feedStream"><div style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px;">Click <b>▶ Start</b> to begin streaming</div></div>
+        <div class="feed-stream" id="feedStream" role="log" aria-live="polite"><div style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px;">Click <b>▶ Start</b> to begin streaming</div></div>
       </div>
-    </div>
+    </section>
 
-    <div class="page" id="memory">
+    <section class="page" id="memory" aria-label="Memory">
       <div class="page-header">
         <h1 class="page-title">Memory</h1>
         <p class="page-subtitle">Agent memory files and daily notes</p>
@@ -746,9 +746,9 @@
           <div id="memoryFileContent" style="max-height:600px;overflow-y:auto;white-space:pre-wrap;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;color:var(--text-primary);"></div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="page" id="files">
+    <section class="page" id="files" aria-label="Files">
       <div class="page-header">
         <h1 class="page-title">Files</h1>
         <p class="page-subtitle">Key workspace and config files</p>
@@ -773,9 +773,9 @@
           <textarea id="keyFileEditor" style="display:none;width:100%;height:560px;background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;resize:vertical;"></textarea>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="page" id="logs">
+    <section class="page" id="logs" aria-label="Logs">
       <div class="page-header">
         <h1 class="page-title">Logs</h1>
         <p class="page-subtitle">System and service logs viewer</p>
@@ -803,9 +803,9 @@
           <div style="color:var(--text-muted);">Click Refresh to load logs...</div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="page" id="security">
+    <section class="page" id="security" aria-label="Security">
       <div class="page-header">
         <h1 class="page-title">Security</h1>
         <p class="page-subtitle">Authentication and security settings</p>
@@ -887,9 +887,9 @@
           </button>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="page" id="sys-security">
+    <section class="page" id="sys-security" aria-label="System Security">
       <div class="page-header">
         <h1 class="page-title">System Security</h1>
         <p class="page-subtitle">Firewall, ports, fail2ban and SSH monitoring</p>
@@ -918,9 +918,9 @@
         <div class="card-title">🔍 OpenClaw Security Audit</div>
         <pre id="secAudit" style="font-size:12px;max-height:400px;overflow-y:auto;white-space:pre-wrap;">Loading...</pre>
       </div>
-    </div>
+    </section>
 
-    <div class="page" id="config-editor">
+    <section class="page" id="config-editor" aria-label="Config Editor">
       <div class="page-header">
         <h1 class="page-title">Config Editor</h1>
         <p class="page-subtitle">Edit OpenClaw configuration</p>
@@ -938,9 +938,9 @@
         <textarea id="configTextarea" spellcheck="false" style="width:100%;min-height:500px;padding:16px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.5;resize:vertical;tab-size:2;" placeholder="Loading..."></textarea>
         <div style="margin-top:8px;font-size:11px;color:var(--text-muted);">⚠️ Saving will create a backup and restart the OpenClaw gateway. Be careful with changes.</div>
       </div>
-    </div>
+    </section>
 
-    <div class="page" id="docker">
+    <section class="page" id="docker" aria-label="Docker">
       <div class="page-header">
         <h1 class="page-title">Docker</h1>
         <p class="page-subtitle">Containers, images and system info</p>
@@ -968,20 +968,20 @@
           <pre id="dockerSystem" style="font-size:12px;max-height:300px;overflow-y:auto;white-space:pre-wrap;">Loading...</pre>
         </div>
       </div>
-    </div>
+    </section>
 
   </main>
 </div>
 
-<div class="toast-container" id="toastContainer"></div>
+<div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
 
-<div class="notification-bell" id="notificationBell" onclick="toggleNotifPanel()" title="Notifications">🔔<span class="notification-badge" id="notifBadge">0</span></div>
-<div class="notif-panel" id="notifPanel">
-  <div class="notif-panel-header"><span>Notifications</span><button onclick="toggleNotifPanel()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">✕</button></div>
+<button class="notification-bell" id="notificationBell" onclick="toggleNotifPanel()" aria-label="Notifications" aria-expanded="false" aria-controls="notifPanel">🔔<span class="notification-badge" id="notifBadge" aria-live="polite">0</span></button>
+<aside class="notif-panel" id="notifPanel" role="complementary" aria-label="Notification panel">
+  <div class="notif-panel-header"><span>Notifications</span><button onclick="toggleNotifPanel()" aria-label="Close notifications" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">✕</button></div>
   <div class="notif-panel-body" id="notifPanelBody"><div style="padding:20px;text-align:center;color:var(--text-muted);">Loading...</div></div>
-</div>
+</aside>
 
-<div class="shortcuts-overlay" id="shortcutsOverlay" onclick="if(event.target===this)toggleShortcuts()">
+<div class="shortcuts-overlay" id="shortcutsOverlay" role="dialog" aria-label="Keyboard shortcuts" onclick="if(event.target===this)toggleShortcuts()">
   <div class="shortcuts-panel">
     <h2 style="font-size:24px;font-weight:700;margin-bottom:24px;">Keyboard Shortcuts</h2>
     <div class="shortcut-item"><span>Switch to Overview</span><span class="shortcut-key">1</span></div>
@@ -996,7 +996,7 @@
   </div>
 </div>
 
-<div class="session-modal-overlay" id="sessionModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:none;align-items:center;justify-content:center;" onclick="if(event.target===this)closeSessionModal()">
+<div class="session-modal-overlay" id="sessionModal" role="dialog" aria-label="Session details" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:none;align-items:center;justify-content:center;" onclick="if(event.target===this)closeSessionModal()">
   <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:16px;width:90%;max-width:700px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;">
     <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
       <div>
@@ -1011,7 +1011,7 @@
   </div>
 </div>
 
-<div class="status-bar">
+<footer class="status-bar" role="contentinfo">
   <div class="status-bar-section">
     <div class="status-bar-item">
       <span class="status-indicator"></span>

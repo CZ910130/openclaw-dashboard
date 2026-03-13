@@ -5,8 +5,8 @@ const {
   base32Encode, verifyTOTP,
   auditLog, checkRateLimit, recordFailedAuth, clearFailedAuth,
   isAuthenticated
-} = require('../utils/auth');
-const { setSecurityHeaders, setSameSiteCORS, getClientIP } = require('../utils/http');
+} = require('../lib/auth');
+const { setSecurityHeaders, setSameSiteCORS, getClientIP } = require('../lib/http');
 
 function handle(req, res, ctx) {
   const ip = getClientIP(req);

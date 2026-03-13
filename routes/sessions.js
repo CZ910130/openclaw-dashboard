@@ -1,9 +1,9 @@
 const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
-const { toNum, normalizeProvider, normalizeModel } = require('../utils/helpers');
-const { estimateMsgCost } = require('../utils/pricing');
-const { sendJson } = require('../utils/http');
+const { toNum, normalizeProvider, normalizeModel } = require('../lib/helpers');
+const { estimateMsgCost } = require('../lib/pricing');
+const { sendJson } = require('../lib/http');
 
 function isSessionFile(f) { return f.endsWith('.jsonl') || f.includes('.jsonl.reset.'); }
 function extractSessionId(f) { return f.replace(/\.jsonl(?:\.reset\.\d+)?$/, ''); }
