@@ -53,6 +53,7 @@ function createSession(username, ip, rememberMe = false) {
   const now = Date.now();
   const expiresAt = now + (rememberMe ? auth.SESSION_REMEMBER_LIFETIME : auth.SESSION_ACTIVITY_TIMEOUT);
   sessions.set(token, { username, ip, createdAt: now, lastActivity: now, expiresAt, rememberMe });
+  saveSessions(); // Persist new session
   return token;
 }
 
@@ -163,8 +164,62 @@ function watchSessionFile(file) {
   } catch {}
 }
 
+// --- HTTPS Redirect ---
+function httpsRedirect(req, res) {
+  if (process.env.DASHBOARD_ALLOW_HTTP === 'true') return true;
+  const ip = getClientIP(req);
+  // Allow localhost and Tailscale without HTTPS
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
+  const cleanIp = ip.replace('::ffff:', '');
+  if (cleanIp.startsWith('100.') && parseInt(cleanIp.split('.')[1]) >= 64 && parseInt(cleanIp.split('.')[1]) <= 127) return true;
+  // Check if already HTTPS
+  if (req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https') return true;
+  // Redirect to HTTPS
+  const host = req.headers.host || 'localhost';
+  const httpsUrl = `https://${host}${req.url}`;
+  res.writeHead(307, { 'Location': httpsUrl, 'Content-Type': 'text/plain' });
+  res.end('Redirecting to HTTPS...');
+  return false;
+}
+
+// --- Persistent Sessions ---
+const sessionsFile = path.join(dataDir, 'sessions.json');
+
+function loadSessions() {
+  try {
+    if (!fs.existsSync(sessionsFile)) return;
+    const data = JSON.parse(fs.readFileSync(sessionsFile, 'utf8'));
+    const now = Date.now();
+    for (const [token, sess] of Object.entries(data)) {
+      if (now < sess.expiresAt) {
+        sessions.set(token, sess);
+      }
+    }
+    console.log(`  📁 Loaded ${sessions.size} persistent sessions`);
+  } catch (e) {
+    console.error('  ⚠️ Failed to load sessions:', e.message);
+  }
+}
+
+function saveSessions() {
+  try {
+    const data = Object.fromEntries(sessions);
+    const tmp = sessionsFile + '.tmp.' + Date.now();
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
+    fs.renameSync(tmp, sessionsFile);
+  } catch {}
+}
+
+// Load sessions on startup
+loadSessions();
+// Save sessions periodically (every 30 seconds)
+setInterval(saveSessions, 30000);
+
 // --- Main Server ---
 const server = http.createServer((req, res) => {
+  // HTTPS redirect first
+  if (!httpsRedirect(req, res)) return;
+  
   const ip = getClientIP(req);
   setSecurityHeaders(res);
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
