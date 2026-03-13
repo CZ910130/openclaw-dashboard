@@ -430,9 +430,69 @@ async function handleLogout() {
   location.reload();
 }
 
+function createSkeletonEl(className, style) {
+  var el = document.createElement('div');
+  el.className = className;
+  if (style) el.style.cssText = style;
+  return el;
+}
+
+function showSkeletons() {
+  // Overview metric skeletons
+  ['runningAgents', 'todaySpend', 'ovSessionPct'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && !el.querySelector('.skeleton')) {
+      el.textContent = '';
+      el.appendChild(createSkeletonEl('skeleton skeleton-value', 'display:inline-block;'));
+    }
+  });
+  // System gauge skeletons
+  document.querySelectorAll('.radial-gauge').forEach(function(g) {
+    if (!g.querySelector('.skeleton-overlay')) {
+      var overlay = document.createElement('div');
+      overlay.className = 'skeleton-overlay';
+      overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;';
+      overlay.appendChild(createSkeletonEl('skeleton skeleton-gauge'));
+      g.style.position = 'relative';
+      g.appendChild(overlay);
+    }
+  });
+  // Sessions table skeleton rows
+  var tbody = document.getElementById('sessionsTableBody');
+  if (tbody && !tbody.querySelector('.skeleton')) {
+    var container = document.createElement('div');
+    container.className = 'skeleton-container';
+    for (var i = 0; i < 5; i++) {
+      var row = document.createElement('div');
+      row.className = 'skeleton-row';
+      row.appendChild(createSkeletonEl('skeleton skeleton-avatar'));
+      var textBlock = document.createElement('div');
+      textBlock.style.cssText = 'flex:1;';
+      textBlock.appendChild(createSkeletonEl('skeleton skeleton-text', 'width:' + (60 + Math.round(Math.random() * 30)) + '%;'));
+      textBlock.appendChild(createSkeletonEl('skeleton skeleton-text short'));
+      row.appendChild(textBlock);
+      row.appendChild(createSkeletonEl('skeleton skeleton-bar', 'width:80px;'));
+      container.appendChild(row);
+    }
+    tbody.textContent = '';
+    tbody.appendChild(container);
+  }
+}
+
+function hideSkeletons() {
+  ['runningAgents', 'todaySpend', 'ovSessionPct'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && el.querySelector('.skeleton')) {
+      el.textContent = id === 'todaySpend' ? '$0.00' : id === 'ovSessionPct' ? '--%' : '0';
+    }
+  });
+  document.querySelectorAll('.skeleton-overlay').forEach(function(el) { el.remove(); });
+}
+
 function showApp() {
   document.getElementById('loginPage').style.display = 'none';
   document.getElementById('mainApp').style.display = 'flex';
+  showSkeletons();
   fetchData();
   fetchNewData();
   fetchHealthHistory();
@@ -1069,7 +1129,8 @@ async function fetchData() {
     sessions = await sessRes.json();
     costs = await costsRes.json();
     systemStats = await sysRes.json();
-    
+
+    hideSkeletons();
     updateDashboard();
     
     // Then load usage async (slower endpoint)
