@@ -11,12 +11,14 @@ const utils = require('./lib/utils');
 const auth = require('./lib/auth');
 const stats = require('./lib/stats');
 const { initStaticCache, serveStatic, trackRequest, getApiStats } = require('./lib/middleware');
+const { IS_DEV, setupHotReload, handleHotReloadSSE, devErrorHandler, handleApiDocs } = require('./lib/devmode');
 const { setupUsageRoutes } = require('./routes/usage');
 const { setupSystemRoutes } = require('./routes/system');
 const { setupApiRoutes } = require('./routes/api');
 
 // Pre-compress and cache static files
 initStaticCache(__dirname);
+setupHotReload(__dirname);
 
 const {
   PORT, WORKSPACE_DIR, dataDir, sessDir, cronFile, auditLogPath, credentialsFile, mfaSecretFile
