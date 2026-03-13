@@ -414,9 +414,25 @@ function handle(req, res, ctx) {
 
     if (action === 'restart-tailscale') {
       auditLog(auditLogPath, 'action_restart_tailscale', ip);
-      exec('systemctl restart tailscaled', (err) => {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: !err, error: err?.message }));
+      // Try sudo -n (non-interactive) first, fall back to regular exec
+      exec('sudo -n systemctl restart tailscaled', (err) => {
+        if (err && err.message.includes('password')) {
+          // Try without sudo as fallback (might work in containers)
+          exec('systemctl restart tailscaled', (err2) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            if (err2) {
+              res.end(JSON.stringify({ 
+                success: false, 
+                error: 'Permission denied. Tailscale restart requires root privileges. Try: sudo systemctl restart tailscaled' 
+              }));
+            } else {
+              res.end(JSON.stringify({ success: true }));
+            }
+          });
+        } else {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: !err, error: err?.message }));
+        }
       });
       return true;
     }
