@@ -1,32 +1,26 @@
 const http = require('http');
 const fs = require('fs');
-const fsp = fs.promises;
 const path = require('path');
-const os = require('os');
-const { exec, execFile } = require('child_process');
 const crypto = require('crypto');
 
 const context = require('./lib/context');
-const utils = require('./lib/utils');
-const auth = require('./lib/auth');
-const stats = require('./lib/stats');
-const { initStaticCache, serveStatic, trackRequest, getApiStats } = require('./lib/middleware');
-const { IS_DEV, setupHotReload, handleHotReloadSSE, devErrorHandler, handleApiDocs } = require('./lib/devmode');
+const { sendJson, sendCompressed, setSecurityHeaders, setSameSiteCORS, getClientIP, httpsEnforcement } = require('./lib/utils');
+const { parseCookies, isAuthenticated, checkRateLimit, SESSION_ACTIVITY_TIMEOUT } = require('./lib/auth');
+const { getSystemStats } = require('./lib/stats');
+const { loadModelPricing } = require('./lib/pricing');
+
+const authRoutes = require('./routes/auth');
+const sessionRoutes = require('./routes/sessions');
+const systemRoutes = require('./routes/system');
+const apiRoutes = require('./routes/api');
+const dockerRoutes = require('./routes/docker');
 const { setupUsageRoutes } = require('./routes/usage');
-const { setupSystemRoutes } = require('./routes/system');
-const { setupApiRoutes } = require('./routes/api');
-
-// Pre-compress and cache static files
-initStaticCache(__dirname);
-setupHotReload(__dirname);
 
 const {
-  PORT, WORKSPACE_DIR, dataDir, sessDir, cronFile, auditLogPath, credentialsFile, mfaSecretFile
+  PORT, WORKSPACE_DIR, dataDir, sessDir, cronFile, auditLogPath,
+  credentialsFile, mfaSecretFile, memoryDir, memoryMdPath, heartbeatPath,
+  healthHistoryFile, skillsDir, configFiles, workspaceFilenames, READ_ONLY_FILES
 } = context;
-
-const {
-  sendJson, sendCompressed, auditLog, setSecurityHeaders, getClientIP
-} = utils;
 
 // --- Initialize directories ---
 try { fs.mkdirSync(dataDir, { recursive: true }); } catch {}
@@ -48,57 +42,90 @@ if (!MFA_SECRET && fs.existsSync(mfaSecretFile)) {
   try { MFA_SECRET = fs.readFileSync(mfaSecretFile, 'utf8').trim(); } catch {}
 }
 
-// --- Sessions ---
+// --- Shared State ---
 const sessions = new Map();
 const rateLimitStore = new Map();
 const pendingMfaSecrets = new Map();
 const csrfTokens = new Map();
+const CSRF_TOKEN_LIFETIME = 4 * 60 * 60 * 1000;
+const MODEL_PRICING = loadModelPricing();
 
-function createSession(username, ip, rememberMe = false) {
-  const token = auth.generateSessionToken();
+// --- Caches ---
+const usageCache = { data: null, time: 0 };
+const costCache = { data: null, time: 0 };
+
+function clearCaches() {
+  usageCache.data = null;
+  usageCache.time = 0;
+  costCache.data = null;
+  costCache.time = 0;
+}
+
+// --- API Rate Limiting ---
+const apiRateLimitStore = new Map();
+function checkApiRateLimit(ip) {
   const now = Date.now();
-  const expiresAt = now + (rememberMe ? auth.SESSION_REMEMBER_LIFETIME : auth.SESSION_ACTIVITY_TIMEOUT);
-  sessions.set(token, { username, ip, createdAt: now, lastActivity: now, expiresAt, rememberMe });
-  saveSessions(); // Persist new session
-  return token;
-}
-
-function getCredentials() {
-  try {
-    if (!fs.existsSync(credentialsFile)) return null;
-    return JSON.parse(fs.readFileSync(credentialsFile, 'utf8'));
-  } catch { return null; }
-}
-
-function saveCredentials(creds) {
-  const tmp = credentialsFile + '.tmp.' + Date.now();
-  fs.writeFileSync(tmp, JSON.stringify(creds, null, 2), 'utf8');
-  fs.renameSync(tmp, credentialsFile);
-}
-
-// --- Security Middleware ---
-function isAuthenticated(req) {
-  const cookies = auth.parseCookies(req);
-  let token = cookies.session_token;
-  if (!token) {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) token = authHeader.substring(7);
-    else try { token = new URL(req.url, 'http://localhost').searchParams.get('token'); } catch { token = null; }
+  const windowMs = 60 * 1000;
+  const maxRequests = 120;
+  let entry = apiRateLimitStore.get(ip);
+  if (!entry || now - entry.windowStart > windowMs) {
+    entry = { windowStart: now, count: 1 };
+    apiRateLimitStore.set(ip, entry);
+    return { blocked: false };
   }
-  if (!token) return false;
-  const session = sessions.get(token);
-  if (!session) return false;
+  entry.count++;
+  if (entry.count > maxRequests) {
+    const retryAfter = Math.ceil((entry.windowStart + windowMs - now) / 1000);
+    return { blocked: true, retryAfter };
+  }
+  return { blocked: false };
+}
+setInterval(() => {
   const now = Date.now();
-  if (now > session.expiresAt) { sessions.delete(token); return false; }
-  if (!session.rememberMe) {
-    if (now - session.lastActivity > auth.SESSION_ACTIVITY_TIMEOUT) { sessions.delete(token); return false; }
-    session.lastActivity = now;
+  for (const [ip, entry] of apiRateLimitStore) {
+    if (now - entry.windowStart > 120000) apiRateLimitStore.delete(ip);
+  }
+}, 300000).unref();
+
+// --- CSRF ---
+function validateCsrfToken(req) {
+  const token = req.headers['x-csrf-token'];
+  if (!token) return false;
+  const entry = csrfTokens.get(token);
+  if (!entry) return false;
+  if (Date.now() - entry.createdAt > CSRF_TOKEN_LIFETIME) {
+    csrfTokens.delete(token);
+    return false;
   }
   return true;
 }
+function requireCsrf(req, res) {
+  if (!validateCsrfToken(req)) {
+    setSecurityHeaders(res);
+    res.writeHead(403, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Invalid or missing CSRF token' }));
+    return false;
+  }
+  return true;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, entry] of csrfTokens) {
+    if (now - entry.createdAt > CSRF_TOKEN_LIFETIME) csrfTokens.delete(token);
+  }
+}, 30 * 60 * 1000).unref();
 
+// --- Auth Middleware ---
 function requireAuth(req, res) {
-  if (!isAuthenticated(req)) {
+  const ip = getClientIP(req);
+  const limitCheck = checkRateLimit(rateLimitStore, ip);
+  if (limitCheck.blocked) {
+    setSecurityHeaders(res);
+    res.writeHead(429, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Too many failed attempts', retryAfter: limitCheck.remainingSeconds }));
+    return false;
+  }
+  if (!isAuthenticated(sessions, req)) {
     setSecurityHeaders(res);
     res.writeHead(401, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Unauthorized' }));
@@ -109,18 +136,32 @@ function requireAuth(req, res) {
 
 // --- Health History ---
 let healthHistory = [];
-try { if (fs.existsSync(context.healthHistoryFile)) healthHistory = JSON.parse(fs.readFileSync(context.healthHistoryFile, 'utf8')); } catch {}
+try { if (fs.existsSync(healthHistoryFile)) healthHistory = JSON.parse(fs.readFileSync(healthHistoryFile, 'utf8')); } catch {}
 
 function saveHealthSnapshot() {
   try {
-    const s = stats.getSystemStats();
+    const s = getSystemStats();
     healthHistory.push({ t: Date.now(), cpu: s.cpu?.usage || 0, ram: s.memory?.percent || 0, temp: s.cpu?.temp || 0, disk: s.disk?.percent || 0 });
     if (healthHistory.length > 288) healthHistory = healthHistory.slice(-288);
-    fs.writeFileSync(context.healthHistoryFile, JSON.stringify(healthHistory));
+    const dir = path.dirname(healthHistoryFile);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(healthHistoryFile, JSON.stringify(healthHistory));
   } catch {}
 }
 setInterval(saveHealthSnapshot, 5 * 60 * 1000);
 saveHealthSnapshot();
+
+// --- Session Cleanup ---
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, sess] of sessions.entries()) {
+    if (now > sess.expiresAt) {
+      sessions.delete(token);
+    } else if (!sess.rememberMe && now - sess.lastActivity > SESSION_ACTIVITY_TIMEOUT) {
+      sessions.delete(token);
+    }
+  }
+}, 60 * 1000);
 
 // --- Live Feed (SSE) ---
 let liveClients = [];
@@ -128,27 +169,19 @@ let liveWatcher = null;
 const _fileWatchers = {};
 const _fileSizes = {};
 
+const { isSessionFile, formatLiveEvent } = sessionRoutes;
+
 function broadcastLiveEvent(data) {
   if (liveClients.length === 0) return;
-  const timestamp = data.timestamp || new Date().toISOString();
-  const sessionKey = data._sessionKey || 'unknown';
-  if (data.type === 'message') {
-    let content = '';
-    const msg = data.message;
-    if (Array.isArray(msg.content)) {
-      const t = msg.content.find(b => b.type === 'text');
-      if (t) content = t.text;
-    } else if (typeof msg.content === 'string') content = msg.content;
-    if (content) {
-      const event = { timestamp, session: sessionKey.substring(0, 8), role: msg.role, content: content.substring(0, 150).replace(/\n/g, ' ') };
-      const message = `data: ${JSON.stringify(event)}\n\n`;
-      liveClients.forEach(res => { try { res.write(message); } catch {} });
-    }
-  }
+  const event = formatLiveEvent(data);
+  if (!event) return;
+  const message = `data: ${JSON.stringify(event)}\n\n`;
+  liveClients.forEach(res => { try { res.write(message); } catch {} });
 }
 
 function watchSessionFile(file) {
   const filePath = path.join(sessDir, file);
+  const sessionKey = file.replace('.jsonl', '');
   if (_fileWatchers[file]) return;
   try { _fileSizes[file] = fs.statSync(filePath).size; } catch { _fileSizes[file] = 0; }
   try {
@@ -163,180 +196,138 @@ function watchSessionFile(file) {
         fs.closeSync(fd);
         _fileSizes[file] = stats.size;
         buf.toString('utf8').split('\n').filter(l => l.trim()).forEach(line => {
-          try { const data = JSON.parse(line); data._sessionKey = file.replace('.jsonl', ''); broadcastLiveEvent(data); } catch {}
+          try { const data = JSON.parse(line); data._sessionKey = sessionKey; broadcastLiveEvent(data); } catch {}
         });
       } catch {}
     });
   } catch {}
 }
 
-// --- HTTPS Redirect ---
-function httpsRedirect(req, res) {
-  if (process.env.DASHBOARD_ALLOW_HTTP === 'true') return true;
-  const ip = getClientIP(req);
-  // Allow localhost and Tailscale without HTTPS
-  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
-  const cleanIp = ip.replace('::ffff:', '');
-  if (cleanIp.startsWith('100.') && parseInt(cleanIp.split('.')[1]) >= 64 && parseInt(cleanIp.split('.')[1]) <= 127) return true;
-  // Check if already HTTPS
-  if (req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https') return true;
-  // Redirect to HTTPS
-  const host = req.headers.host || 'localhost';
-  const httpsUrl = `https://${host}${req.url}`;
-  res.writeHead(307, { 'Location': httpsUrl, 'Content-Type': 'text/plain' });
-  res.end('Redirecting to HTTPS...');
-  return false;
-}
-
-// --- Persistent Sessions ---
-const sessionsFile = path.join(dataDir, 'sessions.json');
-
-function loadSessions() {
+function startLiveWatcher() {
+  if (liveWatcher) return;
   try {
-    if (!fs.existsSync(sessionsFile)) return;
-    const data = JSON.parse(fs.readFileSync(sessionsFile, 'utf8'));
-    const now = Date.now();
-    for (const [token, sess] of Object.entries(data)) {
-      if (now < sess.expiresAt) {
-        sessions.set(token, sess);
+    fs.readdirSync(sessDir).filter(f => isSessionFile(f)).forEach(watchSessionFile);
+    liveWatcher = fs.watch(sessDir, (eventType, filename) => {
+      if (filename && isSessionFile(filename) && !_fileWatchers[filename]) {
+        try { if (fs.existsSync(path.join(sessDir, filename))) watchSessionFile(filename); } catch {}
       }
-    }
-    console.log(`  📁 Loaded ${sessions.size} persistent sessions`);
-  } catch (e) {
-    console.error('  ⚠️ Failed to load sessions:', e.message);
-  }
-}
-
-function saveSessions() {
-  try {
-    const data = Object.fromEntries(sessions);
-    const tmp = sessionsFile + '.tmp.' + Date.now();
-    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
-    fs.renameSync(tmp, sessionsFile);
+    });
   } catch {}
 }
 
-// Load sessions on startup
-loadSessions();
-// Save sessions periodically (every 30 seconds)
-setInterval(saveSessions, 30000);
+// --- Shared Context for Route Modules ---
+const ctx = {
+  // Paths
+  sessDir, cronFile, WORKSPACE_DIR, dataDir, auditLogPath, credentialsFile,
+  memoryDir, memoryMdPath, heartbeatPath, skillsDir, configFiles, workspaceFilenames, READ_ONLY_FILES,
+  // State
+  sessions, rateLimitStore, pendingMfaSecrets, csrfTokens,
+  DASHBOARD_TOKEN, MFA_SECRET, MODEL_PRICING,
+  // Caches
+  usageCache, costCache,
+  clearCaches,
+  // Health
+  healthHistory,
+  // Auth helpers
+  requireAuth,
+  // SSE
+  get liveClients() { return liveClients; },
+  set liveClients(v) { liveClients = v; },
+  startLiveWatcher,
+  formatLiveEvent,
+  _fileWatchers,
+};
+
+// --- Static Files ---
+const htmlPath = path.join(__dirname, 'index.html');
+const staticFiles = {
+  '/styles.css': { file: path.join(__dirname, 'styles.css'), type: 'text/css' },
+  '/app.js': { file: path.join(__dirname, 'app.js'), type: 'application/javascript' }
+};
 
 // --- Main Server ---
 const server = http.createServer((req, res) => {
-  // HTTPS redirect first
-  if (!httpsRedirect(req, res)) return;
-  
-  const ip = getClientIP(req);
+  if (!httpsEnforcement(req, res)) return;
   setSecurityHeaders(res);
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  const ip = getClientIP(req);
 
-  // Request timing & API stats
-  trackRequest(req, res);
-
+  // CORS preflight
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    setSameSiteCORS(req, res);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-CSRF-Token');
+    res.setHeader('Access-Control-Max-Age', '86400');
     res.writeHead(204); res.end(); return;
   }
 
-  // Auth Routes
-  if (req.url === '/api/auth/status') {
-    sendJson(req, res, { registered: !!getCredentials(), loggedIn: isAuthenticated(req) });
-    return;
+  // Auth routes (before requireAuth — these handle their own auth)
+  if (req.url.startsWith('/api/auth/') || req.url === '/api/reauth') {
+    if (authRoutes.handle(req, res, ctx)) return;
   }
 
-  if (req.url === '/api/auth/login' && req.method === 'POST') {
-    let body = '';
-    req.on('data', c => body += c);
-    req.on('end', () => {
-      try {
-        const { username, password, totpCode, rememberMe } = JSON.parse(body);
-        const creds = getCredentials();
-        if (!creds || username !== creds.username || !auth.verifyPassword(password, creds.passwordHash, creds.salt)) {
-          auditLog(auditLogPath, 'login_failed', ip, { username });
-          sendJson(req, res, { error: 'Invalid credentials' }, 401); return;
-        }
-        const secret = creds.mfaSecret || MFA_SECRET;
-        if (secret && !totpCode) { sendJson(req, res, { requiresMfa: true }); return; }
-        if (secret && !auth.verifyTOTP(secret, totpCode)) { sendJson(req, res, { error: 'Invalid TOTP' }, 401); return; }
-        
-        const token = createSession(username, ip, rememberMe);
-        const cookie = [`session_token=${token}`, 'HttpOnly', 'Path=/', 'SameSite=Lax'];
-        res.setHeader('Set-Cookie', cookie.join('; '));
-        sendJson(req, res, { success: true, sessionToken: token });
-        auditLog(auditLogPath, 'login_success', ip, { username });
-      } catch { sendJson(req, res, { error: 'Bad request' }, 400); }
-    });
-    return;
-  }
-
-  // Static files (served from pre-compressed cache)
+  // Static files
   if (req.url === '/' || req.url === '/index.html') {
-    if (serveStatic(req, res, 'index.html')) return;
-    res.writeHead(500); res.end('Error'); return;
+    try {
+      const html = fs.readFileSync(htmlPath, 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(html);
+    } catch { res.writeHead(500); res.end('Error loading dashboard'); }
+    return;
   }
-  if (req.url === '/styles.css') {
-    if (serveStatic(req, res, 'styles.css')) return;
-    res.writeHead(404); res.end('Not found'); return;
-  }
-  if (req.url === '/app.js') {
-    if (serveStatic(req, res, 'app.js')) return;
-    res.writeHead(404); res.end('Not found'); return;
+  if (staticFiles[req.url]) {
+    const { file, type } = staticFiles[req.url];
+    try {
+      const content = fs.readFileSync(file, 'utf8');
+      sendCompressed(req, res, 200, type, content);
+    } catch { res.writeHead(404); res.end('Not found'); }
+    return;
   }
 
-  // Dev mode endpoints (no auth required for hot-reload SSE)
-  if (handleHotReloadSSE(req, res)) return;
+  // Health endpoint (no auth required)
+  if (req.url === '/api/health') {
+    sendJson(req, res, { status: 'ok', uptime: process.uptime() });
+    return;
+  }
 
-  // Protected API Routes
+  // All other /api/ routes require authentication
   if (req.url.startsWith('/api/')) {
-    // API docs available without auth
-    if (handleApiDocs(req, res)) return;
-
     if (!requireAuth(req, res)) return;
+    setSameSiteCORS(req, res);
 
+    // API rate limiting
+    const apiLimit = checkApiRateLimit(ip);
+    if (apiLimit.blocked) {
+      res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': String(apiLimit.retryAfter) });
+      res.end(JSON.stringify({ error: 'Too many requests', retryAfter: apiLimit.retryAfter }));
+      return;
+    }
+
+    // CSRF enforcement on state-changing methods (except auth/reauth)
+    if ((req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE') &&
+        !req.url.startsWith('/api/auth/') && !req.url.startsWith('/api/reauth')) {
+      if (!requireCsrf(req, res)) return;
+    }
+
+    // Delegate to route modules (chain of responsibility)
+    if (sessionRoutes.handle(req, res, ctx)) return;
+    if (systemRoutes.handle(req, res, ctx)) return;
+    if (dockerRoutes.handle(req, res, ctx)) return;
     if (setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir)) return;
-    if (setupSystemRoutes(req, res, { auditLogPath, ip })) return;
-    if (setupApiRoutes(req, res, context)) return;
-
-    if (req.url === '/api/stats') {
-      sendJson(req, res, getApiStats());
-      return;
-    }
-
-    if (req.url === '/api/live') {
-      res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
-      liveClients.push(res);
-      if (!liveWatcher) {
-        fs.readdirSync(sessDir).filter(f => f.endsWith('.jsonl')).forEach(watchSessionFile);
-        liveWatcher = fs.watch(sessDir, (et, fn) => { if (fn && fn.endsWith('.jsonl') && !_fileWatchers[fn]) watchSessionFile(fn); });
-      }
-      res.write('data: {"status":"connected"}\n\n');
-      req.on('close', () => { liveClients = liveClients.filter(c => c !== res); });
-      return;
-    }
-
-    if (req.url === '/api/sessions') {
-      stats.getLastMessage(sessDir, 'main').then(() => { // dummy call to warm up
-        fsp.readFile(path.join(sessDir, 'sessions.json'), 'utf8').then(raw => {
-          const data = JSON.parse(raw);
-          const entries = Object.entries(data);
-          Promise.all(entries.map(async ([key, s]) => ({
-            key, label: s.label || key.split(':').pop(), model: s.model || '-', updatedAt: s.updatedAt || 0, sessionId: s.sessionId || '-'
-          }))).then(results => sendJson(req, res, results));
-        }).catch(() => sendJson(req, res, []));
-      });
-      return;
-    }
+    if (apiRoutes.handle(req, res, ctx)) return;
 
     // Default API 404
     sendJson(req, res, { error: 'Not found' }, 404);
   } else {
-    res.writeHead(404); res.end('Not found');
+    // Non-API fallback: serve index.html (SPA)
+    try {
+      const html = fs.readFileSync(htmlPath, 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(html);
+    } catch { res.writeHead(500); res.end('Error loading dashboard'); }
   }
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log('Dashboard: http://0.0.0.0:' + PORT);
-  console.log('  📄 API docs: http://0.0.0.0:' + PORT + '/api/docs');
-  if (IS_DEV) console.log('  🔧 Dev mode: enabled (DASHBOARD_DEV=true or NODE_ENV=development)');
-});
+server.listen(PORT, '0.0.0.0', () => { console.log('Dashboard: http://0.0.0.0:' + PORT); });
