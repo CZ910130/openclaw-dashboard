@@ -694,13 +694,14 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .table-header {
   display: grid;
-  grid-template-columns: 24px 32px 180px 70px 140px 90px 80px 1fr 90px;
+  grid-template-columns: 24px 32px 150px 70px 90px 90px 80px 1fr 90px;
   gap: 10px;
   padding: 14px 16px;
   background: var(--bg-secondary);
@@ -719,11 +720,12 @@ body {
 
 .table-row {
   display: grid;
-  grid-template-columns: 24px 32px 180px 70px 140px 90px 80px 1fr 90px;
+  grid-template-columns: 24px 32px 150px 70px 90px 90px 80px 1fr 90px;
   gap: 10px;
   padding: 14px 16px;
   align-items: center;
   border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
@@ -750,16 +752,47 @@ body {
   min-width: 0;
 }
 
+/* Checkbox column (1st) - left aligned */
+.table-cell:nth-child(1) input[type="checkbox"] {
+  margin-left: 0;
+}
+
+/* Type column (4th) */
 .table-cell:nth-child(4) {
   min-width: 60px;
   max-width: 70px;
   overflow: visible;
-  text-align: center;
+  text-align: left;
 }
 
 .table-cell:nth-child(4) .badge {
   margin: 0 auto;
   display: inline-block !important;
+}
+
+/* Updated column (9th) - ensure alignment with header */
+.table-cell:nth-child(9) {
+  min-width: 90px;
+}
+
+/* Desktop Overview card - match mobile layout */
+#overviewUsageCard .metric > div:first-child {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#providerSwitch {
+  width: 100%;
+  flex: 0 0 100%;
+  order: -1;
+  margin-bottom: 4px;
+}
+
+#providerSwitch button {
+  flex: 1;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  min-width: 70px;
 }
 
 /* Desktop table badges */
@@ -1142,16 +1175,13 @@ body {
     grid-template-columns: repeat(2, 1fr) !important;
   }
   .table-header, .table-row {
-    grid-template-columns: 24px 32px 1fr 70px !important;
+    min-width: 900px;
     font-size: 11px;
     align-items: start !important;
   }
-  .table-header div:nth-child(n+5),
-  .table-cell:nth-child(n+5) {
-    display: none;
-  }
   .sessions-table {
-    overflow-x: auto;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
   }
   .table-cell {
     align-self: start !important;

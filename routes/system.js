@@ -57,7 +57,8 @@ function getServicesStatus() {
       },
       'agent-dashboard': {
         systemd: ['agent-dashboard'],
-        processes: ['agent-dashboard.*server\\.js', 'node.*server\\.js.*DASHBOARD']
+        processes: ['agent-dashboard.*server\\.js', 'node.*server\\.js'],
+        portCheck: { host: 'localhost', port: 7000 }
       },
       tailscaled: {
         systemd: ['tailscaled'],
@@ -73,7 +74,18 @@ function getServicesStatus() {
       if (activeBySystemd) return { name, active: true };
 
       const activeByProcess = detector.processes.some(hasProcess);
-      return { name, active: activeByProcess };
+      if (activeByProcess) return { name, active: true };
+      
+      // Check port if specified (for agent-dashboard on port 7000)
+      if (detector.portCheck) {
+        try {
+          const { host, port } = detector.portCheck;
+          execSync(`timeout 2 bash -c 'echo > /dev/tcp/${host}/${port}' 2>/dev/null`, { stdio: 'ignore', timeout: 3000 });
+          return { name, active: true };
+        } catch {}
+      }
+      
+      return { name, active: false };
     });
   }
 

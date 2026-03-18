@@ -1540,8 +1540,9 @@ function renderTimeline(filtered) {
   if (!items.length) { document.getElementById('timelineCanvas').innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No sessions in range</div>'; return; }
 
   const colors = { main: 'var(--accent)', sub: 'var(--cyan)', cron: 'var(--yellow)', group: 'var(--blue)' };
+  const isMobile = window.innerWidth <= 768;
   const ticks = [];
-  const tickCount = dateRange === 'today' ? 6 : 7;
+  const tickCount = dateRange === 'today' ? 6 : (isMobile ? 3 : 7);
   for (let i = 0; i <= tickCount; i++) {
     const t = start + (rangeMs / tickCount) * i;
     const d = new Date(t);
@@ -1549,7 +1550,7 @@ function renderTimeline(filtered) {
     ticks.push({pct: (i / tickCount) * 100, label});
   }
 
-  const ticksHtml = ticks.map(t => `<div style="position:absolute;left:${t.pct}%;bottom:0;transform:translateX(-50%);font-size:9px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">${t.label}</div>`).join('');
+  const ticksHtml = ticks.map(t => `<div style="position:absolute;left:${t.pct}%;bottom:0;transform:translateX(-50%);font-size:9px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;white-space:nowrap;">${t.label}</div>`).join('');
 
   const rows = items.map(s => {
     const typeClass = s.key.includes('subagent') ? 'sub' : s.key.includes('cron') ? 'cron' : s.kind === 'group' ? 'group' : 'main';
