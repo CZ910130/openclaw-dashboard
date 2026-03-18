@@ -142,6 +142,12 @@ function handle(req, res, ctx) {
       const token = authHeader.substring(7);
       ctx.sessions.delete(token);
     }
+    // Also delete cookie-based session
+    const cookies = parseCookies(req);
+    const sessionToken = cookies.session_token;
+    if (sessionToken && ctx.sessions.has(sessionToken)) {
+      ctx.sessions.delete(sessionToken);
+    }
     auditLog(ctx.auditLogPath, 'logout', ip);
     setSameSiteCORS(req, res);
     res.writeHead(200, {
