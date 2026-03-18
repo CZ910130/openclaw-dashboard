@@ -153,6 +153,14 @@ function handle(req, res, ctx) {
   }
 
   if (req.url === '/api/auth/reset-password' && req.method === 'POST') {
+    const ip = getClientIP(req);
+    // Rate limit: 3 attempts per 10 minutes for password reset
+    if (checkRateLimit(ctx.rateLimitStore, ip, 3, 600000)) {
+      auditLog(ctx.auditLogPath, 'password_reset_rate_limited', ip);
+      res.writeHead(429, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Too many attempts. Please try again later.' }));
+      return true;
+    }
     let body = '';
     req.on('data', chunk => { body += chunk; if (body.length > 2048) req.destroy(); });
     req.on('end', () => {
