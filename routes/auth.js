@@ -57,7 +57,7 @@ function handle(req, res, ctx) {
           'Content-Type': 'application/json',
           'Set-Cookie': cookieOptions.join('; ')
         });
-        res.end(JSON.stringify({ success: true, sessionToken }));
+        res.end(JSON.stringify({ success: true }));
       } catch (e) {
         console.error('Registration error:', e);
         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -127,7 +127,7 @@ function handle(req, res, ctx) {
           'Content-Type': 'application/json',
           'Set-Cookie': cookieOptions.join('; ')
         });
-        res.end(JSON.stringify({ success: true, sessionToken }));
+        res.end(JSON.stringify({ success: true }));
       } catch (e) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Bad request' }));
