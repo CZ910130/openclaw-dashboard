@@ -97,6 +97,11 @@ function validateCsrfToken(req) {
     csrfTokens.delete(token);
     return false;
   }
+  // Bind CSRF token to session - verify it was issued for current session
+  const cookies = parseCookies(req);
+  if (entry.sessionToken && entry.sessionToken !== cookies.session_token) {
+    return false;
+  }
   return true;
 }
 function requireCsrf(req, res) {
