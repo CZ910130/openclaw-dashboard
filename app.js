@@ -1728,7 +1728,7 @@ function toggleUsageAutoRefresh(on, init) {
   }
 }
 
-async function scrapeClaudeUsage() {
+
 let _cachedGLMUsage = null;
 async function fetchGLMUsage() {
   try {
@@ -1828,6 +1828,8 @@ async function scrapeKimiUsage() {
     btn.disabled = false;
   }
 }
+
+async function scrapeClaudeUsage() {
   const btn = document.getElementById('scrapeBtn');
   const label = document.getElementById('usageAutoLabel');
   const btn2 = document.getElementById('overviewScrapeBtn');
