@@ -32,9 +32,13 @@ let DASHBOARD_TOKEN = process.env.DASHBOARD_TOKEN;
 if (!DASHBOARD_TOKEN) {
   DASHBOARD_TOKEN = crypto.randomBytes(16).toString('hex');
 }
-console.log('\n═══════════════════════════════════════════════════════════');
-console.log('  🔐 Recovery Token: ' + DASHBOARD_TOKEN);
-console.log('═══════════════════════════════════════════════════════════\n');
+// Only print recovery token on first setup (no credentials yet)
+const isFirstSetup = !fs.existsSync(credentialsFile);
+if (isFirstSetup) {
+  console.log('\n═══════════════════════════════════════════════════════════');
+  console.log('  🔐 Recovery Token: ' + DASHBOARD_TOKEN);
+  console.log('═══════════════════════════════════════════════════════════\n');
+}
 
 // --- MFA Secret ---
 let MFA_SECRET = process.env.DASHBOARD_MFA_SECRET;
