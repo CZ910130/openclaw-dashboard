@@ -455,8 +455,10 @@ function handle(req, res, ctx) {
     }
 
     if (action === 'gc') {
+      const { execFile } = require('child_process');
       const projDir = path.join(WORKSPACE_DIR, 'projects');
-      exec(`if [ -d "${projDir}" ]; then for d in ${projDir}/*/; do cd "$d" && git gc --quiet 2>/dev/null; done; fi; cd ${WORKSPACE_DIR} && git gc --quiet 2>/dev/null; echo ok`, (err) => {
+      // Use execFile with cwd to avoid shell injection
+      execFile('git', ['gc', '--quiet'], { cwd: WORKSPACE_DIR }, (err) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true }));
       });
@@ -489,7 +491,9 @@ function handle(req, res, ctx) {
     }
 
     if (action === 'restart-claude') {
-      exec(`tmux kill-session -t claude-persistent 2>/dev/null; sleep 1; tmux new-session -d -s claude-persistent -x 200 -y 60 && tmux send-keys -t claude-persistent "cd ${WORKSPACE_DIR} && claude" Enter && echo "Claude session started"`, { timeout: 20000 }, (err, stdout) => {
+      // Escape WORKSPACE_DIR to prevent shell injection
+      const escapedDir = WORKSPACE_DIR.replace(/["'\\]/g, '\\$&');
+      exec(`tmux kill-session -t claude-persistent 2>/dev/null; sleep 1; tmux new-session -d -s claude-persistent -x 200 -y 60 && tmux send-keys -t claude-persistent "cd \"${escapedDir}\" && claude" Enter && echo "Claude session started"`, { timeout: 20000 }, (err, stdout) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: !err, output: (stdout || '').trim() }));
       });
