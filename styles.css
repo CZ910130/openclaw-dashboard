@@ -775,6 +775,11 @@ body {
   min-width: 90px;
 }
 
+/* Last Message column (8th) - allow expansion on desktop */
+.table-cell:nth-child(8) {
+  min-width: 200px;
+}
+
 /* Desktop Overview card - match mobile layout */
 #overviewUsageCard .metric > div:first-child {
   flex-wrap: wrap;
