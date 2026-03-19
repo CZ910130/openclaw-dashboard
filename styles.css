@@ -701,7 +701,7 @@ body {
 
 .table-header {
   display: grid;
-  grid-template-columns: 24px 32px 150px 70px 90px 90px 80px 1fr 90px;
+  grid-template-columns: 24px 32px 150px 70px 90px 90px 80px minmax(400px, 2fr) 90px;
   gap: 10px;
   padding: 14px 16px;
   background: var(--bg-secondary);
@@ -720,7 +720,7 @@ body {
 
 .table-row {
   display: grid;
-  grid-template-columns: 24px 32px 150px 70px 90px 90px 80px 1fr 90px;
+  grid-template-columns: 24px 32px 150px 70px 90px 90px 80px minmax(400px, 2fr) 90px;
   gap: 10px;
   padding: 14px 16px;
   align-items: center;
@@ -773,14 +773,6 @@ body {
 /* Updated column (9th) - ensure alignment with header */
 .table-cell:nth-child(9) {
   min-width: 90px;
-}
-
-/* Last Message column (8th) - allow expansion on desktop */
-.table-cell:nth-child(8) {
-  min-width: 300px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Desktop Overview card - match mobile layout */
