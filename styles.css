@@ -777,8 +777,7 @@ body {
 
 /* Last Message column (8th) - allow expansion on desktop */
 .table-cell:nth-child(8) {
-  min-width: 200px;
-  max-width: 100%;
+  min-width: 300px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
