@@ -476,6 +476,7 @@ body {
   width: auto !important;
   text-align: center;
   align-self: center;
+  margin-left: 8px;
   font-family: 'JetBrains Mono', monospace;
 }
 
