@@ -482,8 +482,6 @@ body {
   background: #6366f1 !important; 
   color: #fff !important;
   display: inline-block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
   flex-shrink: 0 !important;
   min-width: 28px !important;
   max-width: 40px !important;
