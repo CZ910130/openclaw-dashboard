@@ -1273,6 +1273,10 @@ body {
     font-size: 12px;
     margin-bottom: 12px;
   }
+  #costTrendChart {
+    min-height: auto !important;
+    height: auto !important;
+  }
   .activity-feed {
     max-height: 300px;
   }
