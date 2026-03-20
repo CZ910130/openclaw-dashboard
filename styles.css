@@ -469,6 +469,7 @@ body {
   display: inline-block;
   vertical-align: middle;
   line-height: 1;
+  height: auto;
   flex-shrink: 0;
   min-width: 28px !important;
   max-width: 40px !important;
