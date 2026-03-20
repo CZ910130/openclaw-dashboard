@@ -182,7 +182,7 @@
             <div class="metric-subtitle" id="todayTokensOut" style="font-family:'JetBrains Mono',monospace"></div>
           </div>
         </div>
-        <div class="card" id="overviewUsageCard">
+        <div class="card">
           <div class="metric">
             <div style="display:flex;align-items:center;gap:8px;">
               <div class="metric-value" id="ovSessionPct">--%</div>
@@ -196,7 +196,7 @@
                 </label>
                 <span style="font-size:10px;color:var(--text-muted);" id="usageAutoLabel">Auto</span>
               </div>
-              <div style="display:flex;background:var(--bg-primary);border-radius:6px;overflow:hidden;border:1px solid var(--border);margin-left:4px;" id="providerSwitch">
+              <div style="display:flex;background:var(--bg-primary);border-radius:6px;overflow:hidden;border:1px solid var(--border);margin-left:4px;">
                 <button onclick="switchProvider('claude')" id="provBtnClaude" style="padding:2px 10px;font-size:10px;font-weight:600;border:none;cursor:pointer;transition:0.2s;background:var(--accent);color:#fff;">Claude</button>
                 <button onclick="switchProvider('glm')" id="provBtnGLM" style="padding:2px 10px;font-size:10px;font-weight:600;border:none;cursor:pointer;transition:0.2s;background:transparent;color:var(--text-muted);">GLM</button>
                 <button onclick="switchProvider('kimi')" id="provBtnKimi" style="padding:2px 10px;font-size:10px;font-weight:600;border:none;cursor:pointer;transition:0.2s;background:transparent;color:var(--text-muted);">Kimi</button>
@@ -582,7 +582,7 @@
         <div class="card">
           <h3 class="card-title">Cost Per Minute</h3>
           <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accent);" id="costPerMinValue">$0.00</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:8px;" id="costPerMinSub">Last 30 minutes</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Last 30 minutes</div>
         </div>
       </div>
 
@@ -1029,7 +1029,7 @@
       <span>Last activity: <span id="statusLastActivity">--</span></span>
     </div>
     <div class="status-bar-item">
-      <span id="statusVersion">OpenClaw</span>
+      <span>OpenClaw</span>
     </div>
   </div>
 </footer>
