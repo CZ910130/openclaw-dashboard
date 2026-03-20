@@ -470,8 +470,7 @@ body {
   vertical-align: middle;
   line-height: 1;
   flex-shrink: 0;
-  min-width: 32px;
-  width: auto;
+  width: 40px;
   text-align: center;
   align-self: center;
   margin-left: 8px;
