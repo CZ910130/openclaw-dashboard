@@ -1315,7 +1315,7 @@ function updateOverview() {
         <div class="activity-dot ${isActive ? 'running' : ''}"></div>
         <div class="activity-content">
           <div class="activity-header">
-            <div class="activity-header-left"><span class="activity-name">${s.label}</span><span class="badge ${badgeText}">${badgeText}</span></div>
+            <span class="activity-name">${s.label}</span><span class="badge ${badgeText}">${badgeText}</span>
             <span class="activity-time">${ago}</span>
           </div>
           ${snippet ? `<div class="activity-snippet">${snippet}</div>` : ''}
@@ -1857,67 +1857,7 @@ async function scrapeClaudeUsage() {
 fetchClaudeUsage();
 visibleInterval(fetchClaudeUsage, 60000);
 
-let _cachedGeminiUsage = null;
 let _currentProvider = localStorage.getItem('usageProvider') || 'claude';
-
-async function fetchGeminiUsage() {
-  try {
-    const r = await authFetch(API_BASE + '/api/gemini-usage');
-    const d = await r.json();
-    if (d.error) return;
-    _cachedGeminiUsage = d;
-    const container = document.getElementById('geminiUsageBars');
-    if (container && d.models) {
-      container.innerHTML = '';
-      for (const [name, info] of Object.entries(d.models)) {
-        const used = parseFloat(info.used_percent) || 0;
-        const resets = String(info.resets_in || '').replace(/[<>&"']/g, '');
-        const safeName = String(name).replace(/[<>&"']/g, '');
-        const color = getProgressColor(used);
-        container.innerHTML += '<div>' +
-          '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">' +
-          '<span style="font-weight:600;font-size:14px;">' + safeName + '</span>' +
-          '<span class="mono" style="font-size:12px;color:var(--text-secondary);">' + used + '% used</span>' +
-          '</div>' +
-          '<div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">' +
-          '<div style="height:100%;border-radius:12px;transition:width 0.6s;width:' + used + '%;background:' + color + ';"></div>' +
-          '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);">' + used + '%</div>' +
-          '</div>' +
-          '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Resets in ' + resets + '</div>' +
-          '</div>';
-      }
-    }
-    const ts = document.getElementById('geminiUsageScrapedAt');
-    if (ts && d.scraped_at) {
-      const ago = Math.round((Date.now() - new Date(d.scraped_at).getTime()) / 60000);
-      ts.textContent = ago < 1 ? 'Just now' : ago + 'm ago';
-    }
-    if (_currentProvider === 'gemini') updateOverviewGemini();
-  } catch {}
-}
-
-async function scrapeGeminiUsage() {
-  const btn = document.getElementById('geminiScrapeBtn');
-  const btn2 = document.getElementById('overviewScrapeBtn');
-  const label = document.getElementById('usageAutoLabel');
-  if (btn) { btn.textContent = '⏳ Refreshing...'; btn.disabled = true; }
-  if (btn2) { btn2.textContent = '⏳'; btn2.disabled = true; }
-  if (label && _usageAutoEntry) label.textContent = '⏳...';
-  try {
-    await authFetch(API_BASE + '/api/gemini-usage-scrape', { method: 'POST' });
-    const oldTs = (_cachedGeminiUsage && _cachedGeminiUsage.scraped_at) || '';
-    for (let i = 0; i < 12; i++) {
-      await new Promise(r => setTimeout(r, 2000));
-      await fetchGeminiUsage();
-      if (_cachedGeminiUsage && _cachedGeminiUsage.scraped_at && _cachedGeminiUsage.scraped_at !== oldTs) break;
-    }
-    showToast('Gemini usage refreshed', 'success');
-  } catch {} finally {
-    if (btn) { btn.textContent = '⟳ Refresh'; btn.disabled = false; }
-    if (btn2) { btn2.textContent = '⟳'; btn2.disabled = false; }
-    if (label && _usageAutoEntry) label.textContent = 'Auto ✓';
-  }
-}
 
 let _currentModel = localStorage.getItem('usageModel') || 'session';
 
@@ -1927,17 +1867,10 @@ const _claudeModels = [
   { value: 'weekly_sonnet', label: 'Weekly (Sonnet)' }
 ];
 
-function _getGeminiModelOptions() {
-  if (!_cachedGeminiUsage || !_cachedGeminiUsage.models) return [];
-  return Object.keys(_cachedGeminiUsage.models)
-    .filter(k => /^[\w.\-]+$/.test(k))
-    .map(k => ({ value: k, label: k }));
-}
-
 function _populateModelSelect() {
   const sel = document.getElementById('modelSelect');
   if (!sel) return;
-  const opts = _currentProvider === 'claude' ? _claudeModels : _getGeminiModelOptions();
+  const opts = _claudeModels;
   sel.innerHTML = '';
   opts.forEach(o => {
     const opt = document.createElement('option');
@@ -1963,23 +1896,6 @@ function _setOverviewBar(pct, label) {
   if (barEl) { barEl.style.width = Math.min(pct, 100) + '%'; barEl.style.background = pct < 50 ? 'var(--green)' : pct < 80 ? '#f59e0b' : '#ef4444'; }
   if (labelEl) labelEl.textContent = String(label || '').replace(/[<>&]/g, '');
   if (warnEl) warnEl.style.display = pct >= 80 ? '' : 'none';
-}
-
-function updateOverviewGemini() {
-  _populateModelSelect();
-  if (!_cachedGeminiUsage || !_cachedGeminiUsage.models) return;
-  const model = _cachedGeminiUsage.models[_currentModel];
-  if (!model) {
-    const first = Object.keys(_cachedGeminiUsage.models)[0];
-    if (first) {
-      _currentModel = first;
-      const sel = document.getElementById('modelSelect');
-      if (sel) sel.value = first;
-      _setOverviewBar(_cachedGeminiUsage.models[first].used_percent, 'Resets in ' + _cachedGeminiUsage.models[first].resets_in);
-    }
-    return;
-  }
-  _setOverviewBar(model.used_percent, 'Resets in ' + model.resets_in);
 }
 
 function updateOverviewClaude() {
