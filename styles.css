@@ -416,13 +416,6 @@ body {
   flex-shrink: 0;
   white-space: nowrap;
 }
-}
-
-.activity-time {
-  font-size: 11px;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
 
 .activity-name {
   font-weight: 600;
