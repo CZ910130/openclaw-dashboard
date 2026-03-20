@@ -345,6 +345,7 @@ body {
 
 .activity-item {
   display: flex;
+  align-items: center;
   gap: 8px;
   padding: 8px 10px;
   background: linear-gradient(135deg, rgba(26, 26, 36, 0.6), rgba(31, 31, 46, 0.4));
