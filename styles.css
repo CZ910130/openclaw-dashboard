@@ -464,10 +464,6 @@ body {
 .badge.sub { background: rgba(6, 182, 212, 0.2); color: var(--cyan); }
 .badge.cron { background: rgba(245, 158, 11, 0.2); color: var(--yellow); }
 .badge.group { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
-.badge.group { 
-  background: rgba(59, 130, 246, 0.2); 
-  color: var(--blue);
-}
 
 .model-tag {
   font-family: 'JetBrains Mono', monospace;
