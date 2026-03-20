@@ -1154,25 +1154,6 @@ body {
   .sessions-table {
     overflow-x: auto;
   }
-  #costTrendChart svg {
-    height: 180px !important;
-    display: block;
-  }
-  #costTrendChart text {
-    font-size: 11px !important;
-    font-weight: 500;
-  }
-  #costTrendChart circle {
-    r: 5 !important;
-  }
-  #costTrendChart {
-    min-height: 0 !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-  #costTrendChart svg {
-    overflow: visible !important;
-  }
   #topSessions div,
   #costByModel div {
     gap: 12px !important;
