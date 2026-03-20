@@ -403,15 +403,6 @@ body {
   min-width: 0;
 }
 
-.activity-header-left {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-}
-
 .activity-header .activity-name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1161,11 +1152,6 @@ body {
   .activity-header {
     flex-wrap: nowrap !important;
     gap: 6px !important;
-  }
-  .activity-header-left {
-    min-width: 0 !important;
-    flex: 1 !important;
-    overflow: hidden !important;
   }
   .activity-header .activity-name {
     overflow: hidden !important;
