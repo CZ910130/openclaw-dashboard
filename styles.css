@@ -439,6 +439,10 @@ body {
   font-size: 13px;
   color: var(--text-primary);
   flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .activity-snippet {
