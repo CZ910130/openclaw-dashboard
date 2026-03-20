@@ -474,7 +474,7 @@ body {
   display: inline-block;
 }
 
-.badge.main { background: #6366f1; color: #fff; }
+.badge.main { background: rgba(99, 102, 241, 0.2); color: var(--accent); }
 .badge.sub { background: rgba(6, 182, 212, 0.2); color: var(--cyan); }
 .badge.cron { background: rgba(245, 158, 11, 0.2); color: var(--yellow); }
 .badge.group { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
