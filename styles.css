@@ -1546,7 +1546,7 @@ body.light-theme .activity-item { background: #f0f0f5 !important; }
 body.light-theme .activity-item:hover { background: #e8e8ed !important; }
 body.light-theme .system-grid .card { background: #ffffff !important; }
 body.light-theme .radial-gauge-bg { stroke: #d1d1d6; }
-body.light-theme .session-row:hover { background: rgba(99,102,241,0.06); }
+body.light-theme .table-row:hover { background: rgba(99,102,241,0.06); }
 body.light-theme .log-line:hover { background: rgba(0,0,0,0.03); }
 body.light-theme ::selection { background: rgba(99,102,241,0.2); }
 #themeToggle {
