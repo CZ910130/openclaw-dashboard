@@ -1160,8 +1160,8 @@ body {
   .table-cell .badge {
     display: inline-block !important;
     width: auto !important;
-    min-width: 28px !important;
-    max-width: none !important;
+    min-width: 32px !important;
+    max-width: 40px !important;
     height: 16px !important;
     line-height: 16px !important;
     padding: 0 6px !important;
