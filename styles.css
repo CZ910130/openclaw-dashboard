@@ -437,7 +437,7 @@ body {
   font-weight: 600;
   font-size: 13px;
   color: var(--text-primary);
-  flex-shrink: 0;
+  flex-shrink: 1;
 }
 
 .activity-snippet {
