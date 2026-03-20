@@ -689,16 +689,6 @@ body {
   min-width: 70px;
 }
 
-/* Desktop table badges */
-.table-cell .badge {
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
 .mono {
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
@@ -1045,18 +1035,6 @@ body {
   .table-cell {
     align-self: start !important;
   }
-  .table-cell .badge {
-    /* display: inline-block !important; */
-    /* width: auto !important; */
-    /* min-width: 32px !important; */
-    /* max-width: 40px !important; */
-    /* height: auto !important; */
-    /* line-height: 1 !important; */
-    /* padding: 2px 6px !important; */
-    /* font-size: 10px !important; */
-    /* text-align: center !important; */
-    /* box-sizing: border-box !important; */
-  }
   .sessions-table {
     overflow-x: auto;
   }
@@ -1195,13 +1173,6 @@ body {
   }
   .activity-header {
     align-items: center;
-  }
-  .activity-header .badge {
-    /* align-self: center !important; */
-    /* flex-shrink: 0; */
-    /* height: auto !important; */
-    /* line-height: 1; */
-    /* padding: 2px 6px !important; */
   }
   .bar-chart {
     overflow-x: auto;
