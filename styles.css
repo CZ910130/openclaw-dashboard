@@ -534,25 +534,6 @@ body {
   font-family: 'JetBrains Mono', monospace;
 }
 
-.bar-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(-8px);
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-family: 'JetBrains Mono', monospace;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
-  z-index: 10;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-
 .bar:hover .bar-tooltip {
   opacity: 1;
 }
@@ -747,29 +728,6 @@ body {
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-}
-
-.active-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--green);
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-.active-dot {
-  width: 6px;
-  height: 6px;
-  background: var(--green);
-  border-radius: 50%;
-  box-shadow: 0 0 8px var(--green-glow);
 }
 
 .session-snippet {
@@ -1336,12 +1294,6 @@ body {
   background: var(--bg-tertiary);
   transform: scale(1.05);
 }
-.notification-bell.granted {
-  color: var(--green);
-}
-.notification-bell.denied {
-  color: var(--red);
-}
 
 .notification-badge {
   position: absolute;
@@ -1528,11 +1480,6 @@ body.light-theme .notif-panel { background: #ffffff; border-color: #d1d1d6; box-
   font-weight: 500;
   color: var(--text-primary);
   margin-bottom: 4px;
-}
-
-.toast-submessage {
-  font-size: 12px;
-  color: var(--text-muted);
 }
 
 .toast.fade-out {
