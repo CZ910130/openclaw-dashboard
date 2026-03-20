@@ -344,7 +344,6 @@ body {
 
 .activity-item {
   display: flex;
-  align-items: center;
   gap: 8px;
   padding: 8px 10px;
   background: linear-gradient(135deg, rgba(26, 26, 36, 0.6), rgba(31, 31, 46, 0.4));
@@ -438,11 +437,7 @@ body {
   font-weight: 600;
   font-size: 13px;
   color: var(--text-primary);
-  flex-shrink: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
+  flex-shrink: 0;
 }
 
 .activity-snippet {
