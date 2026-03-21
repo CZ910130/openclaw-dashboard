@@ -988,6 +988,7 @@ body {
     right: 8px !important;
     width: calc(100vw - 16px) !important;
     max-width: 360px;
+    z-index: 400 !important;
   }
   
   body {
