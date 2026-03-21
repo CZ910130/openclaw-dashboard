@@ -1315,7 +1315,7 @@ function updateOverview() {
         <div class="activity-dot ${isActive ? 'running' : ''}"></div>
         <div class="activity-content">
           <div class="activity-header">
-            <span class="activity-name">${s.label}</span><span class="badge ${badgeText}">${badgeText}</span>
+            <span class="badge ${badgeText}">${badgeText}</span><span class="activity-name">${s.label}</span>
             <span class="activity-time">${ago}</span>
           </div>
           ${snippet ? `<div class="activity-snippet">${snippet}</div>` : ''}
