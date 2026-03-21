@@ -1650,7 +1650,7 @@ function updateSessions() {
     const modelColor = getModelColor(s.model);
     const activeIndicator = isActive ? ' <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 5px;background:rgba(16,185,129,0.15);color:var(--green);border-radius:4px;font-size:9px;font-weight:600;vertical-align:middle;">●&thinsp;LIVE</span>' : '';
     const costStr = s.cost > 0 ? '$' + s.cost.toFixed(2) : '-';
-    const lastMsg = s.lastMessage ? s.lastMessage.substring(0, 60) + (s.lastMessage.length > 60 ? '…' : '') : '';
+    const lastMsg = s.lastMessage || '';
     const escapedKey = s.key.replace(/'/g, "\\'");
     const checked = selectedSessions.has(s.key) ? 'checked' : '';
 
