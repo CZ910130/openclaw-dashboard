@@ -451,9 +451,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   display: inline-block;
-  min-width: 32px !important;
-  max-width: 40px !important;
-  height: 14px !important;
+  min-width: 32px;
 }
 
 .badge.main { background: rgba(99, 102, 241, 0.2); color: var(--accent); }
