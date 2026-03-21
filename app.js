@@ -3601,9 +3601,13 @@ const notifIcons = {
 let notifLastSeen = localStorage.getItem('notifLastSeen') || '';
 
 function toggleNotifPanel() {
+  console.log('toggleNotifPanel called');
   const panel = document.getElementById('notifPanel');
-  if (panel.style.display === 'flex') { panel.style.display = 'none'; return; }
+  console.log('Panel element:', panel);
+  console.log('Current display:', panel.style.display);
+  if (panel.style.display === 'flex') { panel.style.display = 'none'; console.log('Hiding panel'); return; }
   panel.style.display = 'flex';
+  console.log('Showing panel');
   fetchNotifications();
 }
 
