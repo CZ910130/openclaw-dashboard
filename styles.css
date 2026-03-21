@@ -655,7 +655,7 @@ body {
 
 .table-cell:nth-child(4) .badge {
   margin: 0 auto;
-  display: inline-block !important;
+  display: inline-block;
 }
 
 /* Updated column (9th) - ensure alignment with header */
