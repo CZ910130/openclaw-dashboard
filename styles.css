@@ -410,6 +410,10 @@ body {
   min-width: 0;
 }
 
+.activity-header .badge {
+  margin-left: auto;
+}
+
 .activity-time {
   font-size: 11px;
   color: var(--text-muted);
