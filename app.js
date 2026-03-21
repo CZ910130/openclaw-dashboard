@@ -3655,7 +3655,8 @@ setTimeout(checkNewNotifications, 3000);
 document.addEventListener('click', (e) => {
   const panel = document.getElementById('notifPanel');
   const bell = document.getElementById('notificationBell');
-  if (panel.style.display === 'flex' && !panel.contains(e.target) && !bell.contains(e.target)) panel.style.display = 'none';
+  const bellMobile = document.getElementById('notificationBellMobile');
+  if (panel.style.display === 'flex' && !panel.contains(e.target) && !bell.contains(e.target) && (!bellMobile || !bellMobile.contains(e.target))) panel.style.display = 'none';
 });
 
 async function dockerAction(action, id) {
