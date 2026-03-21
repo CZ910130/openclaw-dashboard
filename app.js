@@ -1294,11 +1294,11 @@ function updateOverview() {
     const isActive = age < 300000 && !s.aborted;
     const typeClass = s.key.includes('subagent') ? 'sub' :
                       s.key.includes('cron') ? 'cron' :
-                      s.kind === 'group' ? 'group' : 'Cain';
+                      s.kind === 'group' ? 'group' : 'main';
     
     const badgeText = s.key.includes('subagent') ? 'sub' :
                       s.key.includes('cron') ? 'cron' :
-                      s.kind === 'group' ? 'group' : 'Cain';
+                      s.kind === 'group' ? 'group' : 'main';
     
     const tokens = s.totalTokens || 0;
     const tokStr = tokens >= 1000 ? (tokens / 1000).toFixed(0) + 'k' : tokens;
@@ -1553,7 +1553,7 @@ function renderTimeline(filtered) {
   const ticksHtml = ticks.map(t => `<div style="position:absolute;left:${t.pct}%;bottom:0;transform:translateX(-50%);font-size:9px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;white-space:nowrap;">${t.label}</div>`).join('');
 
   const rows = items.map(s => {
-    const typeClass = s.key.includes('subagent') ? 'sub' : s.key.includes('cron') ? 'cron' : s.kind === 'group' ? 'group' : 'Cain';
+    const typeClass = s.key.includes('subagent') ? 'sub' : s.key.includes('cron') ? 'cron' : s.kind === 'group' ? 'group' : 'main';
     const color = colors[typeClass] || 'var(--accent)';
     const created = Math.max(s.createdAt || s.updatedAt, start);
     const leftPct = Math.max(((created - start) / rangeMs) * 100, 0);
@@ -1645,7 +1645,7 @@ function updateSessions() {
     const isActive = age < 300000 && !s.aborted;
     const statusClass = s.aborted ? 'aborted' : isActive ? 'running' : '';
     const statusDot = s.aborted ? '🔴' : isActive ? '🟢' : '⚪';
-    const typeClass = s.key.includes('subagent') ? 'sub' : s.key.includes('cron') ? 'cron' : s.kind === 'group' ? 'group' : 'Cain';
+    const typeClass = s.key.includes('subagent') ? 'sub' : s.key.includes('cron') ? 'cron' : s.kind === 'group' ? 'group' : 'main';
     const shortModel = s.model.split('/').pop();
     const modelColor = getModelColor(s.model);
     const activeIndicator = isActive ? ' <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 5px;background:rgba(16,185,129,0.15);color:var(--green);border-radius:4px;font-size:9px;font-weight:600;vertical-align:middle;">●&thinsp;LIVE</span>' : '';

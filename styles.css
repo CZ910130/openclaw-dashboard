@@ -145,7 +145,7 @@ body {
   display: inline;
 }
 
-.main {
+.content {
   flex: 1;
   margin-left: 72px;
   padding: 32px;
@@ -456,7 +456,7 @@ body {
   height: 14px !important;
 }
 
-.badge.Cain { background: rgba(99, 102, 241, 0.2); color: var(--accent); }
+.badge.main { background: rgba(99, 102, 241, 0.2); color: var(--accent); }
 .badge.sub { background: rgba(6, 182, 212, 0.2); color: var(--cyan); }
 .badge.cron { background: rgba(245, 158, 11, 0.2); color: var(--yellow); }
 .badge.group { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
@@ -887,7 +887,7 @@ body {
     z-index: 250;
   }
   /* Add padding to main content to account for fixed top bar */
-  .main {
+  .content {
     padding-top: 60px !important;
   }
 }
@@ -972,7 +972,7 @@ body {
   }
 
   /* Main content uses full width on mobile */
-  .main {
+  .content {
     margin-left: 0 !important;
     width: 100% !important;
     margin-bottom: 0;
