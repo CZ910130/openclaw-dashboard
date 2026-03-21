@@ -982,6 +982,14 @@ body {
     padding-right: 16px;
   }
   
+  /* Notification panel positioning for mobile */
+  .notif-panel {
+    top: 56px !important;
+    right: 8px !important;
+    width: calc(100vw - 16px) !important;
+    max-width: 360px;
+  }
+  
   body {
     padding-bottom: 40px;
     margin: 0;
