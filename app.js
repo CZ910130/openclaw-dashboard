@@ -3596,7 +3596,17 @@ const notifIcons = {
   register: '📝', reauth_success: '🔓', reauth_failed: '🚫',
   config_saved: '⚙️', config_read: '📖', docker_view: '🐳', docker_action: '🐳',
   sys_security_view: '🛡️', auth_failed: '⚠️', login_mfa_failed: '🔑',
-  password_changed: '🔐', mfa_enabled: '📱', mfa_disabled: '📱'
+  password_changed: '🔐', mfa_enabled: '📱', mfa_disabled: '📱',
+  cron_toggle: '🔄', cron_run: '▶️', cron_run_error: '❌'
+};
+
+const notifLabels = {
+  login_success: 'Login', login_failed: 'Login Failed', login_locked: 'Account Locked', logout: 'Logout',
+  register: 'Account Created', reauth_success: 'Re-authenticated', reauth_failed: 'Re-auth Failed',
+  config_saved: 'Config Saved', config_read: 'Config Read', docker_view: 'Docker View', docker_action: 'Docker Action',
+  sys_security_view: 'Security View', auth_failed: 'Auth Failed', login_mfa_failed: 'MFA Failed',
+  password_changed: 'Password Changed', mfa_enabled: 'MFA Enabled', mfa_disabled: 'MFA Disabled',
+  cron_toggle: 'Cron Toggled', cron_run: 'Cron Triggered', cron_run_error: 'Cron Run Failed'
 };
 let notifLastSeen = localStorage.getItem('notifLastSeen') || '';
 
@@ -3622,7 +3632,7 @@ async function fetchNotifications() {
       const time = e.timestamp ? new Date(e.timestamp).toLocaleString() : '';
       const detail = e.username ? ' (' + e.username + ')' : '';
       const ip = e.ip ? ' from ' + e.ip : '';
-      return '<div class="notif-item"><div class="notif-icon">' + icon + '</div><div class="notif-content"><div class="notif-event">' + (e.event||'').replace(/_/g, ' ') + detail + ip + '</div><div class="notif-time">' + time + '</div></div></div>';
+      return '<div class="notif-item"><div class="notif-icon">' + icon + '</div><div class="notif-content"><div class="notif-event">' + (notifLabels[e.event] || (e.event||'').replace(/_/g, ' ')) + detail + ip + '</div><div class="notif-time">' + time + '</div></div></div>';
     }).join('');
     if (data.events.length) {
       notifLastSeen = data.events[0].timestamp;
