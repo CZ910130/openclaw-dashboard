@@ -286,8 +286,9 @@ const server = http.createServer((req, res) => {
     } catch { res.writeHead(500); res.end('Error loading dashboard'); }
     return;
   }
-  if (staticFiles[req.url]) {
-    const { file, type } = staticFiles[req.url];
+  const staticKey = req.url.split('?')[0];
+  if (staticFiles[staticKey]) {
+    const { file, type } = staticFiles[staticKey];
     try {
       const content = fs.readFileSync(file, 'utf8');
       sendCompressed(req, res, 200, type, content);
