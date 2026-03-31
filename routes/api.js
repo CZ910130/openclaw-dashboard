@@ -155,7 +155,15 @@ function handle(req, res, ctx) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, enabled: job.enabled }));
       } else if (action === 'run') {
-        exec(`openclaw cron run ${id}`, { timeout: 60000 }, (err) => {});
+        exec(`openclaw cron run ${id} --timeout 30000`, { timeout: 35000 }, (err, stdout, stderr) => {
+          if (err) {
+            auditLog(auditLogPath, 'cron_run_error', ip, { cronId: id, error: err.message });
+            console.error(`[cron run] error for ${id}:`, err.message, stderr);
+          } else {
+            auditLog(auditLogPath, 'cron_run', ip, { cronId: id });
+            console.log(`[cron run] started ${id}:`, stdout?.trim());
+          }
+        });
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true }));
       } else {
