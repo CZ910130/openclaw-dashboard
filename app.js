@@ -2562,10 +2562,20 @@ window.toggleCronJob = async function(id) {
 };
 
 window.runCronJob = async function(id) {
+  showToast('Triggering cron job...', 'info');
   try {
-    await authFetch(`/api/cron/${id}/run`, { method: 'POST' });
+    const res = await authFetch(`/api/cron/${id}/run`, { method: 'POST' });
+    if (!res.ok) {
+      const body = await res.text();
+      showToast('Cron run failed: ' + res.status + ' ' + body, 'error');
+      return;
+    }
+    showToast('Cron job triggered ✅', 'success');
     sendNotification('Cron Job Started', `Running cron job ${id.substring(0, 8)}...`);
-  } catch {}
+    setTimeout(fetchNewData, 3000);
+  } catch (e) {
+    showToast('Cron run error: ' + e.message, 'error');
+  }
 };
 
     document.getElementById('gitActivity').innerHTML = git.map(c => {
