@@ -2556,26 +2556,16 @@ async function fetchNewData() {
 // Cron management
 window.toggleCronJob = async function(id) {
   try {
-    await authFetch(API_BASE + `/api/cron/${id}/toggle`, { method: 'POST' });
+    await authFetch(`/api/cron/${id}/toggle`, { method: 'POST' });
     await fetchNewData();
-  } catch (e) { console.error('toggleCronJob error:', e); }
+  } catch {}
 };
 
 window.runCronJob = async function(id) {
   try {
-    const res = await authFetch(API_BASE + `/api/cron/${id}/run`, { method: 'POST' });
-    if (!res.ok) {
-      const body = await res.text();
-      console.error('runCronJob failed:', res.status, body);
-      sendNotification('Cron Run Failed', `Status ${res.status}: ${body}`);
-      return;
-    }
+    await authFetch(`/api/cron/${id}/run`, { method: 'POST' });
     sendNotification('Cron Job Started', `Running cron job ${id.substring(0, 8)}...`);
-    setTimeout(fetchNewData, 3000);
-  } catch (e) {
-    console.error('runCronJob error:', e);
-    sendNotification('Cron Run Error', e.message);
-  }
+  } catch {}
 };
 
     document.getElementById('gitActivity').innerHTML = git.map(c => {
