@@ -5,21 +5,30 @@ const { sendJson } = require('../lib/utils');
 
 function setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir) {
   const providers = {
-    'claude': { 
-      file: path.join(dataDir, 'claude-usage.json'), 
-      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-claude-usage.sh') 
+    'claude': {
+      file: path.join(dataDir, 'claude-usage.json'),
+      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-claude-usage.sh')
     },
-    'gemini': { 
-      file: path.join(dataDir, 'gemini-usage.json'), 
-      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-gemini-usage.sh') 
+    'gemini': {
+      file: path.join(dataDir, 'gemini-usage.json'),
+      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-gemini-usage.sh')
     },
-    'glm': { 
-      file: path.join(dataDir, 'glm-usage.json'), 
-      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-glm-usage.sh') 
+    'openai': {
+      file: path.join(dataDir, 'openai-usage.json'),
+      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-openai-usage.sh')
     },
-    'kimi': { 
-      file: path.join(dataDir, 'kimi-usage.json'), 
-      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-kimi-usage.sh') 
+    'minimax': {
+      file: path.join(dataDir, 'minimax-usage.json'),
+      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-minimax-usage.sh')
+    },
+    // Backward-compat aliases for older dashboard clients
+    'glm': {
+      file: path.join(dataDir, 'openai-usage.json'),
+      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-openai-usage.sh')
+    },
+    'kimi': {
+      file: path.join(dataDir, 'minimax-usage.json'),
+      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-minimax-usage.sh')
     }
   };
 
@@ -59,6 +68,8 @@ function setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir) {
   const legacyMap = {
     '/api/claude-usage': 'claude',
     '/api/gemini-usage': 'gemini',
+    '/api/openai-usage': 'openai',
+    '/api/minimax-usage': 'minimax',
     '/api/glm-usage': 'glm',
     '/api/kimi-usage': 'kimi'
   };
@@ -77,6 +88,8 @@ function setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir) {
   const legacyScrapeMap = {
     '/api/claude-usage-scrape': 'claude',
     '/api/gemini-usage-scrape': 'gemini',
+    '/api/openai-usage-scrape': 'openai',
+    '/api/minimax-usage-scrape': 'minimax',
     '/api/glm-usage-scrape': 'glm',
     '/api/kimi-usage-scrape': 'kimi'
   };

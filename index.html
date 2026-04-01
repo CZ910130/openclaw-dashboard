@@ -198,8 +198,8 @@
               </div>
               <div style="display:flex;background:var(--bg-primary);border-radius:6px;overflow:hidden;border:1px solid var(--border);margin-left:4px;">
                 <button onclick="switchProvider('claude')" id="provBtnClaude" style="padding:2px 10px;font-size:10px;font-weight:600;border:none;cursor:pointer;transition:0.2s;background:var(--accent);color:#fff;">Claude</button>
-                <button onclick="switchProvider('glm')" id="provBtnGLM" style="padding:2px 10px;font-size:10px;font-weight:600;border:none;cursor:pointer;transition:0.2s;background:transparent;color:var(--text-muted);">GLM</button>
-                <button onclick="switchProvider('kimi')" id="provBtnKimi" style="padding:2px 10px;font-size:10px;font-weight:600;border:none;cursor:pointer;transition:0.2s;background:transparent;color:var(--text-muted);">Kimi</button>
+                <button onclick="switchProvider('openai')" id="provBtnOpenAI" style="padding:2px 10px;font-size:10px;font-weight:600;border:none;cursor:pointer;transition:0.2s;background:transparent;color:var(--text-muted);">ChatGPT</button>
+                <button onclick="switchProvider('minimax')" id="provBtnMiniMax" style="padding:2px 10px;font-size:10px;font-weight:600;border:none;cursor:pointer;transition:0.2s;background:transparent;color:var(--text-muted);">MiniMax</button>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
@@ -599,46 +599,46 @@
 
       <div class="card mb-24">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <h3 class="card-title" style="margin:0;">GLM Code Usage (Zhipu)</h3>
+          <h3 class="card-title" style="margin:0;">ChatGPT Usage (Local Sessions)</h3>
           <div style="display:flex;align-items:center;gap:12px;">
-            <span style="font-size:11px;color:var(--text-muted);" id="glmUsageScrapedAt">Not scraped yet</span>
-            <button onclick="scrapeGLMUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="glmScrapeBtn">⟳ Refresh</button>
+            <span style="font-size:11px;color:var(--text-muted);" id="openaiUsageScrapedAt">Not scraped yet</span>
+            <button onclick="scrapeOpenAIUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="openaiScrapeBtn">⟳ Refresh</button>
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:20px;" id="glmUsageBars">
+        <div style="display:flex;flex-direction:column;gap:20px;" id="openaiUsageBars">
           <div>
             <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-              <span style="font-weight:600;font-size:14px;">Session</span>
-              <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="glmSessionLabel">--</span>
+              <span style="font-weight:600;font-size:14px;">Last 24h</span>
+              <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="openaiSessionLabel">--</span>
             </div>
             <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
-              <div id="glmSessionBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="glmSessionPct">--</div>
+              <div id="openaiSessionBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="openaiSessionPct">--</div>
             </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="glmSessionReset"></div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="openaiSessionReset"></div>
           </div>
         </div>
       </div>
 
       <div class="card mb-24">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <h3 class="card-title" style="margin:0;">Kimi Usage (Moonshot)</h3>
+          <h3 class="card-title" style="margin:0;">MiniMax Usage (Local Sessions)</h3>
           <div style="display:flex;align-items:center;gap:12px;">
-            <span style="font-size:11px;color:var(--text-muted);" id="kimiUsageScrapedAt">Not scraped yet</span>
-            <button onclick="scrapeKimiUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="kimiScrapeBtn">⟳ Refresh</button>
+            <span style="font-size:11px;color:var(--text-muted);" id="minimaxUsageScrapedAt">Not scraped yet</span>
+            <button onclick="scrapeMiniMaxUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="minimaxScrapeBtn">⟳ Refresh</button>
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:20px;" id="kimiUsageBars">
+        <div style="display:flex;flex-direction:column;gap:20px;" id="minimaxUsageBars">
           <div>
             <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-              <span style="font-weight:600;font-size:14px;">Session</span>
-              <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="kimiSessionLabel">--</span>
+              <span style="font-weight:600;font-size:14px;">Last 24h</span>
+              <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="minimaxSessionLabel">--</span>
             </div>
             <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
-              <div id="kimiSessionBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="kimiSessionPct">--</div>
+              <div id="minimaxSessionBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="minimaxSessionPct">--</div>
             </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="kimiSessionReset"></div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="minimaxSessionReset"></div>
           </div>
         </div>
       </div>

@@ -1729,26 +1729,27 @@ function toggleUsageAutoRefresh(on, init) {
 }
 
 
-let _cachedGLMUsage = null;
-async function fetchGLMUsage() {
+function _setUsageBar(prefix, data) {
+  if (!data) return;
+  const bar = document.getElementById(prefix + 'Bar');
+  const pct = document.getElementById(prefix + 'Pct');
+  const label = document.getElementById(prefix + 'Label');
+  const reset = document.getElementById(prefix + 'Reset');
+  if (bar) { bar.style.width = data.percent + '%'; bar.style.background = getProgressColor(data.percent); }
+  if (pct) pct.textContent = data.percent + '%';
+  if (label) label.textContent = data.label || (data.percent + '% used');
+  if (reset) reset.textContent = data.detail || (data.resets ? 'Resets ' + data.resets : '');
+}
+
+let _cachedOpenAIUsage = null;
+async function fetchOpenAIUsage() {
   try {
-    const r = await authFetch(API_BASE + '/api/glm-usage');
+    const r = await authFetch(API_BASE + '/api/openai-usage');
     const d = await r.json();
     if (d.error) return;
-    _cachedGLMUsage = d;
-    function setBar(prefix, data) {
-      if (!data) return;
-      const bar = document.getElementById(prefix + 'Bar');
-      const pct = document.getElementById(prefix + 'Pct');
-      const label = document.getElementById(prefix + 'Label');
-      const reset = document.getElementById(prefix + 'Reset');
-      if (bar) { bar.style.width = data.percent + '%'; bar.style.background = getProgressColor(data.percent); }
-      if (pct) pct.textContent = data.percent + '%';
-      if (label) label.textContent = data.percent + '% used';
-      if (reset) reset.textContent = data.resets ? 'Resets ' + data.resets : '';
-    }
-    setBar('glmSession', d.session);
-    const ts = document.getElementById('glmUsageScrapedAt');
+    _cachedOpenAIUsage = d;
+    _setUsageBar('openaiSession', d.session);
+    const ts = document.getElementById('openaiUsageScrapedAt');
     if (ts && d.scraped_at) {
       const ago = Math.round((Date.now() - new Date(d.scraped_at).getTime()) / 60000);
       ts.textContent = ago < 1 ? 'Just now' : ago + 'm ago';
@@ -1756,49 +1757,38 @@ async function fetchGLMUsage() {
   } catch {}
 }
 
-async function scrapeGLMUsage() {
-  const btn = document.getElementById('glmScrapeBtn');
+async function scrapeOpenAIUsage() {
+  const btn = document.getElementById('openaiScrapeBtn');
   if (!btn) return;
   const origText = btn.textContent;
-  btn.textContent = '⏳ Scraping...';
+  btn.textContent = '⏳ Refreshing...';
   btn.disabled = true;
   try {
-    await authFetch(API_BASE + '/api/glm-usage-scrape', { method: 'POST' });
-    const oldTs = (_cachedGLMUsage && _cachedGLMUsage.scraped_at) || '';
+    await authFetch(API_BASE + '/api/openai-usage-scrape', { method: 'POST' });
+    const oldTs = (_cachedOpenAIUsage && _cachedOpenAIUsage.scraped_at) || '';
     for (let i = 0; i < 5; i++) {
-      await new Promise(r => setTimeout(r, 2000));
-      await fetchGLMUsage();
-      if (_cachedGLMUsage && _cachedGLMUsage.scraped_at && _cachedGLMUsage.scraped_at !== oldTs) break;
+      await new Promise(r => setTimeout(r, 1200));
+      await fetchOpenAIUsage();
+      if (_cachedOpenAIUsage && _cachedOpenAIUsage.scraped_at && _cachedOpenAIUsage.scraped_at !== oldTs) break;
     }
-    showToast('GLM usage refreshed', 'success');
+    showToast('ChatGPT usage refreshed', 'success');
   } catch(e) {
-    showToast('Failed to scrape GLM usage', 'danger');
+    showToast('Failed to refresh ChatGPT usage', 'danger');
   } finally {
     btn.textContent = origText;
     btn.disabled = false;
   }
 }
 
-let _cachedKimiUsage = null;
-async function fetchKimiUsage() {
+let _cachedMiniMaxUsage = null;
+async function fetchMiniMaxUsage() {
   try {
-    const r = await authFetch(API_BASE + '/api/kimi-usage');
+    const r = await authFetch(API_BASE + '/api/minimax-usage');
     const d = await r.json();
     if (d.error) return;
-    _cachedKimiUsage = d;
-    function setBar(prefix, data) {
-      if (!data) return;
-      const bar = document.getElementById(prefix + 'Bar');
-      const pct = document.getElementById(prefix + 'Pct');
-      const label = document.getElementById(prefix + 'Label');
-      const reset = document.getElementById(prefix + 'Reset');
-      if (bar) { bar.style.width = data.percent + '%'; bar.style.background = getProgressColor(data.percent); }
-      if (pct) pct.textContent = data.percent + '%';
-      if (label) label.textContent = data.percent + '% used';
-      if (reset) reset.textContent = data.resets ? 'Resets ' + data.resets : '';
-    }
-    setBar('kimiSession', d.session);
-    const ts = document.getElementById('kimiUsageScrapedAt');
+    _cachedMiniMaxUsage = d;
+    _setUsageBar('minimaxSession', d.session);
+    const ts = document.getElementById('minimaxUsageScrapedAt');
     if (ts && d.scraped_at) {
       const ago = Math.round((Date.now() - new Date(d.scraped_at).getTime()) / 60000);
       ts.textContent = ago < 1 ? 'Just now' : ago + 'm ago';
@@ -1806,23 +1796,23 @@ async function fetchKimiUsage() {
   } catch {}
 }
 
-async function scrapeKimiUsage() {
-  const btn = document.getElementById('kimiScrapeBtn');
+async function scrapeMiniMaxUsage() {
+  const btn = document.getElementById('minimaxScrapeBtn');
   if (!btn) return;
   const origText = btn.textContent;
-  btn.textContent = '⏳ Scraping...';
+  btn.textContent = '⏳ Refreshing...';
   btn.disabled = true;
   try {
-    await authFetch(API_BASE + '/api/kimi-usage-scrape', { method: 'POST' });
-    const oldTs = (_cachedKimiUsage && _cachedKimiUsage.scraped_at) || '';
+    await authFetch(API_BASE + '/api/minimax-usage-scrape', { method: 'POST' });
+    const oldTs = (_cachedMiniMaxUsage && _cachedMiniMaxUsage.scraped_at) || '';
     for (let i = 0; i < 5; i++) {
-      await new Promise(r => setTimeout(r, 2000));
-      await fetchKimiUsage();
-      if (_cachedKimiUsage && _cachedKimiUsage.scraped_at && _cachedKimiUsage.scraped_at !== oldTs) break;
+      await new Promise(r => setTimeout(r, 1200));
+      await fetchMiniMaxUsage();
+      if (_cachedMiniMaxUsage && _cachedMiniMaxUsage.scraped_at && _cachedMiniMaxUsage.scraped_at !== oldTs) break;
     }
-    showToast('Kimi usage refreshed', 'success');
+    showToast('MiniMax usage refreshed', 'success');
   } catch(e) {
-    showToast('Failed to scrape Kimi usage', 'danger');
+    showToast('Failed to refresh MiniMax usage', 'danger');
   } finally {
     btn.textContent = origText;
     btn.disabled = false;
@@ -1858,6 +1848,8 @@ fetchClaudeUsage();
 visibleInterval(fetchClaudeUsage, 60000);
 
 let _currentProvider = localStorage.getItem('usageProvider') || 'claude';
+if (_currentProvider === 'glm') _currentProvider = 'openai';
+if (_currentProvider === 'kimi') _currentProvider = 'minimax';
 
 let _currentModel = localStorage.getItem('usageModel') || 'session';
 
@@ -1866,11 +1858,24 @@ const _claudeModels = [
   { value: 'weekly_all', label: 'Weekly (All)' },
   { value: 'weekly_sonnet', label: 'Weekly (Sonnet)' }
 ];
+const _openaiModels = [
+  { value: 'session', label: 'Last 24h' }
+];
+const _minimaxModels = [
+  { value: 'session', label: 'Last 24h' }
+];
+
+function _getProviderModelOptions() {
+  if (_currentProvider === 'claude') return _claudeModels;
+  if (_currentProvider === 'openai') return _openaiModels;
+  if (_currentProvider === 'minimax') return _minimaxModels;
+  return _claudeModels;
+}
 
 function _populateModelSelect() {
   const sel = document.getElementById('modelSelect');
   if (!sel) return;
-  const opts = _claudeModels;
+  const opts = _getProviderModelOptions();
   sel.innerHTML = '';
   opts.forEach(o => {
     const opt = document.createElement('option');
@@ -1907,50 +1912,57 @@ function updateOverviewClaude() {
   _setOverviewBar(d.percent, d.resets ? 'Resets ' + d.resets : '');
 }
 
-function updateOverviewGLM() {
-  if (!_cachedGLMUsage || !_cachedGLMUsage.session) return;
-  const d = _cachedGLMUsage.session;
-  _setOverviewBar(d.percent, d.resets ? 'Resets ' + d.resets : '');
+function updateOverviewOpenAI() {
+  _populateModelSelect();
+  if (!_cachedOpenAIUsage || !_cachedOpenAIUsage.session) return;
+  const d = _cachedOpenAIUsage.session;
+  _setOverviewBar(d.percent, d.label || d.detail || '');
 }
 
-function updateOverviewKimi() {
-  if (!_cachedKimiUsage || !_cachedKimiUsage.session) return;
-  const d = _cachedKimiUsage.session;
-  _setOverviewBar(d.percent, d.resets ? 'Resets ' + d.resets : '');
+function updateOverviewMiniMax() {
+  _populateModelSelect();
+  if (!_cachedMiniMaxUsage || !_cachedMiniMaxUsage.session) return;
+  const d = _cachedMiniMaxUsage.session;
+  _setOverviewBar(d.percent, d.label || d.detail || '');
 }
 
 function switchModel(val) {
   _currentModel = val;
-  localStorage.setItem(_currentProvider === 'claude' ? 'claudeModel' : _currentProvider === 'glm' ? 'glmModel' : 'kimiModel', val);
+  const storageKey = _currentProvider === 'claude'
+    ? 'claudeModel'
+    : _currentProvider === 'openai'
+      ? 'openaiModel'
+      : 'minimaxModel';
+  localStorage.setItem(storageKey, val);
   if (_currentProvider === 'claude') updateOverviewClaude();
-  else if (_currentProvider === 'glm') updateOverviewGLM();
-  else if (_currentProvider === 'kimi') updateOverviewKimi();
+  else if (_currentProvider === 'openai') updateOverviewOpenAI();
+  else if (_currentProvider === 'minimax') updateOverviewMiniMax();
 }
 
 function switchProvider(prov) {
   _currentProvider = prov;
   localStorage.setItem('usageProvider', prov);
   const cBtn = document.getElementById('provBtnClaude');
-  const gBtn = document.getElementById('provBtnGLM');
-  const kBtn = document.getElementById('provBtnKimi');
+  const oBtn = document.getElementById('provBtnOpenAI');
+  const mBtn = document.getElementById('provBtnMiniMax');
   
   // Reset all buttons
   if (cBtn) { cBtn.style.background = 'transparent'; cBtn.style.color = 'var(--text-muted)'; }
-  if (gBtn) { gBtn.style.background = 'transparent'; gBtn.style.color = 'var(--text-muted)'; }
-  if (kBtn) { kBtn.style.background = 'transparent'; kBtn.style.color = 'var(--text-muted)'; }
+  if (oBtn) { oBtn.style.background = 'transparent'; oBtn.style.color = 'var(--text-muted)'; }
+  if (mBtn) { mBtn.style.background = 'transparent'; mBtn.style.color = 'var(--text-muted)'; }
   
   if (prov === 'claude') {
     if (cBtn) { cBtn.style.background = 'var(--accent)'; cBtn.style.color = '#fff'; }
     _currentModel = localStorage.getItem('claudeModel') || 'session';
     if (typeof updateOverviewClaude === 'function') updateOverviewClaude();
-  } else if (prov === 'glm') {
-    if (gBtn) { gBtn.style.background = '#4285f4'; gBtn.style.color = '#fff'; }
-    _currentModel = localStorage.getItem('glmModel') || 'glm-4';
-    if (typeof updateOverviewGLM === 'function') updateOverviewGLM();
-  } else if (prov === 'kimi') {
-    if (kBtn) { kBtn.style.background = '#4285f4'; kBtn.style.color = '#fff'; }
-    _currentModel = localStorage.getItem('kimiModel') || 'kimi-k2';
-    if (typeof updateOverviewKimi === 'function') updateOverviewKimi();
+  } else if (prov === 'openai') {
+    if (oBtn) { oBtn.style.background = '#10a37f'; oBtn.style.color = '#fff'; }
+    _currentModel = localStorage.getItem('openaiModel') || 'session';
+    if (typeof updateOverviewOpenAI === 'function') updateOverviewOpenAI();
+  } else if (prov === 'minimax') {
+    if (mBtn) { mBtn.style.background = '#4285f4'; mBtn.style.color = '#fff'; }
+    _currentModel = localStorage.getItem('minimaxModel') || 'session';
+    if (typeof updateOverviewMiniMax === 'function') updateOverviewMiniMax();
   }
   
   if (_usageAutoEntry) {
@@ -1961,12 +1973,12 @@ function switchProvider(prov) {
 
 function scrapeCurrentProvider() {
   if (_currentProvider === 'claude' && typeof scrapeClaudeUsage === 'function') scrapeClaudeUsage();
-  else if (_currentProvider === 'glm' && typeof scrapeGLMUsage === 'function') scrapeGLMUsage();
-  else if (_currentProvider === 'kimi' && typeof scrapeKimiUsage === 'function') scrapeKimiUsage();
+  else if (_currentProvider === 'openai' && typeof scrapeOpenAIUsage === 'function') scrapeOpenAIUsage();
+  else if (_currentProvider === 'minimax' && typeof scrapeMiniMaxUsage === 'function') scrapeMiniMaxUsage();
 }
 
-if (typeof fetchGLMUsage === 'function') { fetchGLMUsage(); visibleInterval(fetchGLMUsage, 60000); }
-if (typeof fetchKimiUsage === 'function') { fetchKimiUsage(); visibleInterval(fetchKimiUsage, 60000); }
+if (typeof fetchOpenAIUsage === 'function') { fetchOpenAIUsage(); visibleInterval(fetchOpenAIUsage, 60000); }
+if (typeof fetchMiniMaxUsage === 'function') { fetchMiniMaxUsage(); visibleInterval(fetchMiniMaxUsage, 60000); }
 switchProvider(_currentProvider);
 
 function getProgressColor(pct) {
