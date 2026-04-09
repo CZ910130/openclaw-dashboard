@@ -221,7 +221,7 @@ async function handleRegister(event) {
     try { data = await res.json(); } catch (e) { data = {}; }
 
     if (res.ok && data.success) {
-      setStoredToken(data.sessionToken, false);
+      clearStoredToken();
       showApp();
     } else {
       registerError.textContent = data.error || ('Registration failed (' + res.status + ')');
@@ -283,7 +283,7 @@ async function handleLogin(event) {
     }
     
     if (res.ok && data.success) {
-      setStoredToken(data.sessionToken, rememberMe);
+      clearStoredToken();
       showApp();
     } else {
       if (data.lockoutRemaining) {
@@ -520,21 +520,28 @@ async function checkAuth() {
   try {
     const statusRes = await fetch(API_BASE + '/api/auth/status', { credentials: 'include' });
     const statusData = await statusRes.json();
-    
+
+    if (statusData && statusData.loggedIn) {
+      clearStoredToken();
+      showApp();
+      return;
+    }
+
     const token = getStoredToken();
-    
-    if (token) {
+    if (token && token !== 'undefined' && token !== 'null') {
       const verifyRes = await fetch(API_BASE + '/api/sessions', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
       });
       if (verifyRes.ok) {
         showApp();
         return;
-      } else {
-        clearStoredToken();
       }
+      clearStoredToken();
+    } else {
+      clearStoredToken();
     }
-    
+
     if (statusData.registered === false) {
       showRegistrationForm();
       showLogin();
@@ -566,18 +573,16 @@ async function getCsrfToken() {
 
 function authFetch(url, options = {}) {
   const token = getStoredToken();
-  if (!token) {
-    showLogin();
-    throw new Error('Not authenticated');
-  }
-  
+
   options.headers = options.headers || {};
-  options.headers['Authorization'] = `Bearer ${token}`;
+  if (token && token !== 'undefined' && token !== 'null') {
+    options.headers['Authorization'] = `Bearer ${token}`;
+  }
   options.credentials = 'include';
   if (typeof options.cache === 'undefined') {
     options.cache = 'no-store';
   }
-  
+
   const method = (options.method || 'GET').toUpperCase();
   if (method !== 'GET' && method !== 'HEAD' && !url.includes('/api/auth/')) {
     return getCsrfToken().then(csrfToken => {
@@ -585,7 +590,7 @@ function authFetch(url, options = {}) {
       return doFetch(url, options);
     });
   }
-  
+
   return doFetch(url, options);
 }
 
