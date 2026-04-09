@@ -587,24 +587,44 @@ function authFetch(url, options = {}) {
   if (method !== 'GET' && method !== 'HEAD' && !url.includes('/api/auth/')) {
     return getCsrfToken().then(csrfToken => {
       options.headers['X-CSRF-Token'] = csrfToken;
-      return doFetch(url, options);
+      return doFetch(url, options, true);
     });
   }
 
-  return doFetch(url, options);
+  return doFetch(url, options, false);
 }
 
-function doFetch(url, options) {
-  return fetch(url, options).then(res => {
+function doFetch(url, options, allowCsrfRetry = false) {
+  return fetch(url, options).then(async res => {
     if (res.status === 401) {
       clearStoredToken();
+      _csrfToken = null;
       showLogin();
       throw new Error('Session expired');
     }
-    if (res.status === 403 && res.headers.get('X-CSRF-Required')) {
-      _csrfToken = null;
-      throw new Error('CSRF token expired. Please retry.');
+
+    if (res.status === 403) {
+      let bodyText = '';
+      try {
+        bodyText = await res.clone().text();
+      } catch {}
+      const looksLikeCsrf = res.headers.get('X-CSRF-Required') || /csrf|Invalid or missing CSRF token/i.test(bodyText);
+      if (looksLikeCsrf) {
+        _csrfToken = null;
+        _csrfExpiry = 0;
+        if (allowCsrfRetry) {
+          const freshToken = await getCsrfToken();
+          const retryOptions = {
+            ...options,
+            headers: { ...(options.headers || {}), 'X-CSRF-Token': freshToken }
+          };
+          const retryRes = await fetch(url, retryOptions);
+          if (retryRes.status !== 403) return retryRes;
+        }
+        throw new Error('CSRF token expired. Please retry.');
+      }
     }
+
     return res;
   });
 }
