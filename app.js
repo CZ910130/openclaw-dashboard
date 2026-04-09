@@ -2568,20 +2568,40 @@ async function fetchNewData() {
 // Cron management
 window.toggleCronJob = async function(id) {
   try {
-    await authFetch(`/api/cron/${id}/toggle`, { method: 'POST' });
+    const res = await authFetch(API_BASE + `/api/cron/${id}/toggle`, { method: 'POST' });
+    if (!res.ok) {
+      const body = await res.text();
+      showToast('Cron toggle failed: ' + res.status + ' ' + body, 'error');
+      return;
+    }
     await fetchNewData();
-  } catch {}
+  } catch (e) {
+    showToast('Cron toggle error: ' + e.message, 'error');
+  }
 };
 
 window.runCronJob = async function(id) {
   showToast('Triggering cron job...', 'info');
   try {
-    const res = await authFetch(`/api/cron/${id}/run`, { method: 'POST' });
+    const res = await authFetch(API_BASE + `/api/cron/${id}/run`, { method: 'POST' });
+    let payload = null;
+    try {
+      payload = await res.json();
+    } catch {
+      payload = null;
+    }
+
     if (!res.ok) {
-      const body = await res.text();
-      showToast('Cron run failed: ' + res.status + ' ' + body, 'error');
+      const detail = payload?.error || payload?.detail || `${res.status}`;
+      showToast('Cron run failed: ' + detail, 'error');
       return;
     }
+
+    if (payload?.success && payload?.reason === 'already-running') {
+      showToast('Cron job is already running ⏳', 'info');
+      return;
+    }
+
     showToast('Cron job triggered ✅', 'success');
     sendNotification('Cron Job Started', `Running cron job ${id.substring(0, 8)}...`);
     setTimeout(fetchNewData, 3000);

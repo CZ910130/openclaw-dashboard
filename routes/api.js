@@ -156,16 +156,35 @@ function handle(req, res, ctx) {
         res.end(JSON.stringify({ success: true, enabled: job.enabled }));
       } else if (action === 'run') {
         exec(`openclaw cron run ${id} --timeout 30000 2>&1`, { timeout: 35000, env: { ...process.env } }, (err, stdout, stderr) => {
-          if (err) {
-            auditLog(auditLogPath, 'cron_run_error', ip, { cronId: id, error: err.message });
-            console.error(`[cron run] error for ${id}:`, err.message, stderr?.trim());
-          } else {
-            auditLog(auditLogPath, 'cron_run', ip, { cronId: id });
-            console.log(`[cron run] started ${id}:`, stdout?.trim());
+          const trimmed = (stdout || '').trim();
+          let parsed = null;
+          try {
+            parsed = trimmed ? JSON.parse(trimmed) : null;
+          } catch {}
+
+          if (err && !(parsed && parsed.ok && parsed.reason === 'already-running')) {
+            auditLog(auditLogPath, 'cron_run_error', ip, { cronId: id, error: err.message, stdout: trimmed || '', stderr: (stderr || '').trim() });
+            console.error(`[cron run] error for ${id}:`, err.message, stderr?.trim(), trimmed);
+            if (!res.headersSent) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: false, error: 'Cron trigger failed', detail: trimmed || stderr?.trim() || err.message }));
+            }
+            return;
+          }
+
+          const alreadyRunning = !!(parsed && parsed.ok && parsed.reason === 'already-running');
+          auditLog(auditLogPath, alreadyRunning ? 'cron_run_already_running' : 'cron_run', ip, { cronId: id, reason: alreadyRunning ? 'already-running' : 'started' });
+          console.log(`[cron run] ${alreadyRunning ? 'already running' : 'started'} ${id}:`, trimmed || stderr?.trim());
+          if (!res.headersSent) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              success: true,
+              ran: parsed?.ran !== false,
+              reason: alreadyRunning ? 'already-running' : 'started',
+              output: trimmed || null
+            }));
           }
         });
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true }));
       } else {
         res.writeHead(404);
         res.end('Not found');
