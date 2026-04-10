@@ -55,18 +55,23 @@ document.addEventListener('visibilitychange', () => {
 let sysSecAuthed = false;
 const TOKEN_KEY = 'dashboardToken';
 const TOKEN_EXPIRY_KEY = 'dashboardTokenExpiry';
+
+/*
+Legacy token-storage auth path kept commented for recovery/debugging.
+The dashboard now authenticates with cookie-backed sessions instead.
+
 const TOKEN_LIFETIME = 24 * 60 * 60 * 1000;
 const REMEMBER_ME_LIFETIME = 3 * 60 * 60 * 1000;
 
 function getStoredToken() {
   let token = sessionStorage.getItem(TOKEN_KEY);
   let expiry = sessionStorage.getItem(TOKEN_EXPIRY_KEY);
-  
+
   if (!token || !expiry) {
     token = localStorage.getItem(TOKEN_KEY);
     expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
   }
-  
+
   if (token && expiry) {
     if (Date.now() < parseInt(expiry)) {
       return token;
@@ -90,8 +95,18 @@ function setStoredToken(token, rememberMe = false) {
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
   }
 }
+*/
+
+function getStoredToken() {
+  return null;
+}
+
+function setStoredToken(_token, _rememberMe = false) {
+  // Cookie session auth only. Kept as a no-op to avoid breaking old call sites.
+}
 
 function clearStoredToken() {
+  // Cleanup only, in case a browser still has stale legacy token data.
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(TOKEN_EXPIRY_KEY);
   sessionStorage.removeItem(TOKEN_KEY);
@@ -597,10 +612,16 @@ function authFetch(url, options = {}) {
 function doFetch(url, options, allowCsrfRetry = false) {
   return fetch(url, options).then(async res => {
     if (res.status === 401) {
+      let bodyText = '';
+      try {
+        bodyText = await res.clone().text();
+      } catch {}
       clearStoredToken();
       _csrfToken = null;
+      _csrfExpiry = 0;
       showLogin();
-      throw new Error('Session expired');
+      const message = /session expired/i.test(bodyText) ? 'Session expired, please log in again.' : 'Unauthorized, please log in again.';
+      throw new Error(message);
     }
 
     if (res.status === 403) {
@@ -621,8 +642,9 @@ function doFetch(url, options, allowCsrfRetry = false) {
           const retryRes = await fetch(url, retryOptions);
           if (retryRes.status !== 403) return retryRes;
         }
-        throw new Error('CSRF token expired. Please retry.');
+        throw new Error('Security token expired, please retry.');
       }
+      throw new Error('Forbidden request. You may need to log in again.');
     }
 
     return res;

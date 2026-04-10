@@ -17,7 +17,7 @@ const dockerRoutes = require('./routes/docker');
 const { setupUsageRoutes } = require('./routes/usage');
 
 const {
-  PORT, WORKSPACE_DIR, dataDir, sessDir, cronFile, auditLogPath,
+  APP_DIR, PORT, WORKSPACE_DIR, WORKSPACE_SOURCE, dataDir, sessDir, cronFile, auditLogPath,
   credentialsFile, mfaSecretFile, memoryDir, memoryMdPath, heartbeatPath,
   healthHistoryFile, skillsDir, configFiles, workspaceFilenames, READ_ONLY_FILES
 } = context;
@@ -111,8 +111,8 @@ function validateCsrfToken(req) {
 function requireCsrf(req, res) {
   if (!validateCsrfToken(req)) {
     setSecurityHeaders(res);
-    res.writeHead(403, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Invalid or missing CSRF token' }));
+    res.writeHead(403, { 'Content-Type': 'application/json', 'X-CSRF-Required': '1' });
+    res.end(JSON.stringify({ error: 'Invalid or missing CSRF token', code: 'csrf_required', detail: 'Refresh the security token and retry.' }));
     return false;
   }
   return true;
@@ -136,8 +136,8 @@ function requireAuth(req, res) {
   }
   if (!isAuthenticated(sessions, req)) {
     setSecurityHeaders(res);
-    res.writeHead(401, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Unauthorized' }));
+    res.writeHead(401, { 'Content-Type': 'application/json', 'X-Auth-Required': '1' });
+    res.end(JSON.stringify({ error: 'Unauthorized', code: 'auth_required', detail: 'Your dashboard session is missing or expired. Please log in again.' }));
     return false;
   }
   return true;
@@ -340,4 +340,9 @@ const server = http.createServer((req, res) => {
   }
 });
 
-server.listen(PORT, '0.0.0.0', () => { console.log('Dashboard: http://0.0.0.0:' + PORT); });
+server.listen(PORT, '0.0.0.0', () => {
+  console.log('Dashboard: http://0.0.0.0:' + PORT);
+  console.log('[dashboard] appDir=' + APP_DIR);
+  console.log('[dashboard] workspaceDir=' + WORKSPACE_DIR + ' (source=' + WORKSPACE_SOURCE + ')');
+  console.log('[dashboard] authDataDir=' + path.dirname(credentialsFile));
+});
