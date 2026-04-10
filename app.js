@@ -1093,10 +1093,6 @@ checkAuth();
     }
   }
 })();
-setInterval(() => {
-  const token = getStoredToken();
-  if (!token) showLogin();
-}, 60000);
 
 let sessions = [];
 let costs = {};
