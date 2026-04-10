@@ -7,6 +7,7 @@ const { sendJson, sendCompressed, auditLog, getClientIP, safePath } = require('.
 const { parseCookies } = require('../lib/auth');
 
 const MAX_FILE_BODY = 1024 * 1024;
+const OPENCLAW_BIN = process.env.OPENCLAW_BIN || '/home/qq1028280994/.npm-global/bin/openclaw';
 
 function buildKeyFilesAllowed(ctx) {
   const { WORKSPACE_DIR, workspaceFilenames, skillsDir, configFiles } = ctx;
@@ -155,7 +156,7 @@ function handle(req, res, ctx) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, enabled: job.enabled }));
       } else if (action === 'run') {
-        exec(`openclaw cron run ${id} --timeout 30000 2>&1`, { timeout: 35000, env: { ...process.env } }, (err, stdout, stderr) => {
+        exec(`"${OPENCLAW_BIN}" cron run ${id} --timeout 30000 2>&1`, { timeout: 35000, env: { ...process.env } }, (err, stdout, stderr) => {
           const trimmed = (stdout || '').trim();
           let parsed = null;
           try {
