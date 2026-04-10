@@ -2395,8 +2395,7 @@ function connectLiveFeed() {
     sel.value = current || 'all';
   }
 
-  const token = getStoredToken();
-  liveEventSource = new EventSource(API_BASE + '/api/live?token=' + encodeURIComponent(token));
+  liveEventSource = new EventSource(API_BASE + '/api/live');
   
   liveEventSource.onmessage = (event) => {
     if (feedPaused) return;
@@ -3350,10 +3349,7 @@ async function fetchLogs() {
   viewer.innerHTML = '<div style="color:var(--text-muted);">Loading logs...</div>';
 
   try {
-    const token = getStoredToken();
-    const res = await fetch(`/api/logs?service=${service}&lines=${lines}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const res = await authFetch(API_BASE + `/api/logs?service=${service}&lines=${lines}`);
 
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -3541,10 +3537,10 @@ async function submitReauth() {
   const errEl = document.getElementById('reauthError');
   if (!pass) { errEl.textContent = 'Password required'; errEl.style.display = 'block'; return; }
   try {
-    const token = getStoredToken();
     const res = await fetch(API_BASE + '/api/reauth', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pass, totp: totp || undefined })
     });
     const data = await res.json();
