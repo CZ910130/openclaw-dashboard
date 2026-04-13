@@ -243,15 +243,48 @@ async function getCostData(sessDir, cronFile, MODEL_PRICING) {
       perSessionResult[sid] = { cost, label: label || ('session-' + sid.substring(0, 8)) };
     }
 
+    // Calculate streaks server-side (no data cap issue)
+    let currentStreak = 0;
+    let checkDate = new Date();
+    const todayStr = checkDate.toISOString().substring(0, 10);
+    while (currentStreak < 365) {
+      const ds = checkDate.toISOString().substring(0, 10);
+      if (perDay[ds] && perDay[ds] > 0) {
+        currentStreak++;
+      } else if (ds !== todayStr) {
+        break;
+      }
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+
+    let longestStreak = 0;
+    let tempStreak = 0;
+    let prevDate = null;
+    const sortedDays = Object.keys(perDay).sort();
+    for (const day of sortedDays) {
+      if (perDay[day] > 0) {
+        if (!prevDate) { tempStreak = 1; }
+        else {
+          const diff = (new Date(day) - new Date(prevDate)) / 86400000;
+          if (diff === 1) { tempStreak++; }
+          else { longestStreak = Math.max(longestStreak, tempStreak); tempStreak = 1; }
+        }
+        prevDate = day;
+      }
+    }
+    longestStreak = Math.max(longestStreak, tempStreak);
+
     return {
       total: Math.round(total * 100) / 100,
       today: Math.round((perDay[todayKey] || 0) * 100) / 100,
       week: Math.round(weekCost * 100) / 100,
       perModel,
       perDay: Object.fromEntries(Object.entries(perDay).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 14)),
-      perSession: perSessionResult
+      perSession: perSessionResult,
+      currentStreak,
+      longestStreak
     };
-  } catch (e) { return { total: 0, today: 0, week: 0, perModel: {}, perDay: {}, perSession: {} }; }
+  } catch (e) { return { total: 0, today: 0, week: 0, perModel: {}, perDay: {}, perSession: {}, currentStreak: 0, longestStreak: 0 }; }
 }
 
 function getUsageWindows(sessDir, MODEL_PRICING) {

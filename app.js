@@ -3292,49 +3292,10 @@ async function fetchLifetimeStats() {
 function calculateStreak() {
   try {
     const perDay = costs.perDay || {};
-    const days = Object.keys(perDay).sort();
-    
-    // Calculate current streak
-    let currentStreak = 0;
-    const today = new Date().toISOString().substring(0, 10);
-    let checkDate = new Date();
-    
-    while (true) {
-      const dateStr = checkDate.toISOString().substring(0, 10);
-      if (perDay[dateStr] && perDay[dateStr] > 0) {
-        currentStreak++;
-      } else if (dateStr !== today) {
-        break;
-      }
-      checkDate.setDate(checkDate.getDate() - 1);
-      if (currentStreak > 365) break;
-    }
-    
-    // Calculate longest streak
-    let longestStreak = 0;
-    let tempStreak = 0;
-    let prevDate = null;
-    
-    for (const day of days) {
-      if (perDay[day] > 0) {
-        if (!prevDate) {
-          tempStreak = 1;
-        } else {
-          const diff = (new Date(day) - new Date(prevDate)) / 86400000;
-          if (diff === 1) {
-            tempStreak++;
-          } else {
-            longestStreak = Math.max(longestStreak, tempStreak);
-            tempStreak = 1;
-          }
-        }
-        prevDate = day;
-      }
-    }
-    longestStreak = Math.max(longestStreak, tempStreak);
-    
-    document.getElementById('currentStreak').textContent = currentStreak;
-    document.getElementById('longestStreak').textContent = longestStreak;
+
+    // Use server-calculated streaks (avoids 14-day data cap)
+    document.getElementById('currentStreak').textContent = costs.currentStreak || 0;
+    document.getElementById('longestStreak').textContent = costs.longestStreak || 0;
     
     // Render 30-day calendar
     const calendarEl = document.getElementById('streakCalendar');
