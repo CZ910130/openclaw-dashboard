@@ -3288,33 +3288,133 @@ async function fetchLifetimeStats() {
   } catch {}
 }
 
-// Activity Streak
+// Activity Streak — GitHub-style contribution graph
 function calculateStreak() {
   try {
     const perDay = costs.perDay || {};
 
-    // Use server-calculated streaks (avoids 14-day data cap)
     document.getElementById('currentStreak').textContent = costs.currentStreak || 0;
     document.getElementById('longestStreak').textContent = costs.longestStreak || 0;
-    
-    // Render 30-day calendar
+
     const calendarEl = document.getElementById('streakCalendar');
-    if (calendarEl) {
-      const last30Days = [];
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().substring(0, 10);
-        const active = perDay[dateStr] && perDay[dateStr] > 0;
-        last30Days.push({ date: dateStr, active });
-      }
-      
-      calendarEl.innerHTML = last30Days.map(d => {
-        const color = d.active ? 'var(--green)' : 'var(--bg-tertiary)';
-        const opacity = d.active ? '1' : '0.3';
-        return `<div style="width:100%;aspect-ratio:1;background:${color};opacity:${opacity};border-radius:3px;" title="${d.date}"></div>`;
-      }).join('');
+    if (!calendarEl) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 364 days (52 weeks), aligned to start on Sunday
+    const startDay = new Date(today);
+    startDay.setDate(startDay.getDate() - 363);
+    startDay.setDate(startDay.getDate() - startDay.getDay());
+
+    const dayCosts = [];
+    const d = new Date(startDay);
+    while (d <= today) {
+      const key = d.toISOString().substring(0, 10);
+      dayCosts.push({ date: key, cost: perDay[key] || 0 });
+      d.setDate(d.getDate() + 1);
     }
+
+    // Quartile thresholds from non-zero values
+    const nonZero = dayCosts.map(x => x.cost).filter(c => c > 0).sort((a, b) => a - b);
+    let q1 = 0, q2 = 0, q3 = 0;
+    if (nonZero.length > 0) {
+      q1 = nonZero[Math.floor(nonZero.length * 0.25)];
+      q2 = nonZero[Math.floor(nonZero.length * 0.50)];
+      q3 = nonZero[Math.floor(nonZero.length * 0.75)];
+    }
+    function getLevel(cost) {
+      if (cost <= 0) return 0;
+      if (cost <= q1) return 1;
+      if (cost <= q2) return 2;
+      if (cost <= q3) return 3;
+      return 4;
+    }
+
+    // Group into weeks (columns)
+    const weeks = [];
+    for (let i = 0; i < dayCosts.length; i += 7) weeks.push(dayCosts.slice(i, i + 7));
+
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const dayLabels = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+
+    // Build DOM instead of innerHTML for safety
+    const frag = document.createDocumentFragment();
+
+    // Month labels row
+    const monthRow = document.createElement('div');
+    monthRow.className = 'contrib-months';
+    const corner = document.createElement('div');
+    corner.className = 'contrib-label';
+    monthRow.appendChild(corner);
+    let lastMonth = -1;
+    for (const week of weeks) {
+      const ml = document.createElement('div');
+      ml.className = 'contrib-month-label';
+      const firstDay = new Date(week[0].date);
+      const m = firstDay.getMonth();
+      if (m !== lastMonth && firstDay.getDate() <= 7) {
+        ml.textContent = months[m];
+        lastMonth = m;
+      }
+      monthRow.appendChild(ml);
+    }
+    frag.appendChild(monthRow);
+
+    // Grid container
+    const grid = document.createElement('div');
+    grid.className = 'contrib-grid';
+
+    // Day labels column
+    const dayCol = document.createElement('div');
+    dayCol.className = 'contrib-days';
+    for (const label of dayLabels) {
+      const dl = document.createElement('div');
+      dl.className = 'contrib-day-label';
+      dl.textContent = label;
+      dayCol.appendChild(dl);
+    }
+    grid.appendChild(dayCol);
+
+    // Week columns
+    for (const week of weeks) {
+      const col = document.createElement('div');
+      col.className = 'contrib-col';
+      for (let row = 0; row < 7; row++) {
+        const cell = document.createElement('div');
+        cell.className = 'contrib-cell';
+        if (row < week.length) {
+          const entry = week[row];
+          const isFuture = new Date(entry.date) > today;
+          const level = isFuture ? -1 : getLevel(entry.cost);
+          cell.classList.add('contrib-level-' + level);
+          cell.title = entry.date + ': ' + (entry.cost > 0 ? '$' + entry.cost.toFixed(2) : 'No activity');
+        } else {
+          cell.classList.add('contrib-level--1');
+        }
+        col.appendChild(cell);
+      }
+      grid.appendChild(col);
+    }
+    frag.appendChild(grid);
+
+    // Legend
+    const legend = document.createElement('div');
+    legend.className = 'contrib-legend';
+    const lessSpan = document.createElement('span');
+    lessSpan.textContent = 'Less';
+    legend.appendChild(lessSpan);
+    for (let i = 0; i <= 4; i++) {
+      const lc = document.createElement('div');
+      lc.className = 'contrib-cell contrib-level-' + i;
+      legend.appendChild(lc);
+    }
+    const moreSpan = document.createElement('span');
+    moreSpan.textContent = 'More';
+    legend.appendChild(moreSpan);
+    frag.appendChild(legend);
+
+    calendarEl.replaceChildren(frag);
   } catch (e) {
     console.error('Streak calculation error:', e);
   }

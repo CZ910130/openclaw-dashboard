@@ -279,7 +279,7 @@ async function getCostData(sessDir, cronFile, MODEL_PRICING) {
       today: Math.round((perDay[todayKey] || 0) * 100) / 100,
       week: Math.round(weekCost * 100) / 100,
       perModel,
-      perDay: Object.fromEntries(Object.entries(perDay).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 90)),
+      perDay: Object.fromEntries(Object.entries(perDay).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 400)),
       perSession: perSessionResult,
       currentStreak,
       longestStreak
