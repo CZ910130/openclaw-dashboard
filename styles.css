@@ -1477,10 +1477,10 @@ body.light-theme .streak-day { border-color: #d1d1d6; }
 .contrib-graph-wrapper { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
 .contrib-graph-wrapper::-webkit-scrollbar { height: 4px; }
 .contrib-graph-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-.contrib-months { position: relative; height: 16px; margin-bottom: 2px; margin-left: 28px; }
+.contrib-months { position: relative; height: 16px; margin-bottom: 2px; margin-left: 27px; }
 .contrib-month-label { position: absolute; top: 0; font-size: 10px; color: var(--text-muted); white-space: nowrap; }
-.contrib-grid { display: inline-flex; gap: 0; }
-.contrib-days { display: flex; flex-direction: column; padding-top: 0; margin-right: 4px; }
+.contrib-grid { display: inline-flex; gap: 3px; }
+.contrib-days { display: flex; flex-direction: column; gap: 3px; padding-top: 0; margin-right: 0; }
 .contrib-day-label { width: 24px; height: 13px; font-size: 9px; color: var(--text-muted); display: flex; align-items: center; }
 .contrib-col { display: flex; flex-direction: column; gap: 3px; }
 .contrib-cell { width: 13px; height: 13px; border-radius: 2px; flex-shrink: 0; }
