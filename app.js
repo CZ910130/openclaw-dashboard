@@ -3341,32 +3341,22 @@ function calculateStreak() {
     // Build DOM instead of innerHTML for safety
     const frag = document.createDocumentFragment();
 
-    // Month labels row — each label spans the correct number of week columns
+    // Month labels — positioned absolutely above the grid columns
     const monthRow = document.createElement('div');
     monthRow.className = 'contrib-months';
-    const cellSize = 16; // 13px cell + 3px gap
+    const weekPx = 16; // 13px cell + 3px gap
     let lastMonth = -1;
-    let monthStart = 0;
     for (let wi = 0; wi < weeks.length; wi++) {
       const firstDay = new Date(weeks[wi][0].date);
       const m = firstDay.getMonth();
       if (m !== lastMonth) {
-        if (lastMonth >= 0) {
-          // Set width of previous label to span its weeks
-          const prevLabel = monthRow.lastElementChild;
-          if (prevLabel) prevLabel.style.width = ((wi - monthStart) * cellSize) + 'px';
-        }
-        const ml = document.createElement('div');
+        const ml = document.createElement('span');
         ml.className = 'contrib-month-label';
         ml.textContent = months[m];
+        ml.style.left = (wi * weekPx) + 'px';
         monthRow.appendChild(ml);
         lastMonth = m;
-        monthStart = wi;
       }
-    }
-    // Set width for last month label
-    if (monthRow.lastElementChild && weeks.length > monthStart) {
-      monthRow.lastElementChild.style.width = ((weeks.length - monthStart) * cellSize) + 'px';
     }
     frag.appendChild(monthRow);
 
@@ -3407,21 +3397,22 @@ function calculateStreak() {
     }
     frag.appendChild(grid);
 
-    // Legend
-    const legend = document.createElement('div');
-    legend.className = 'contrib-legend';
-    const lessSpan = document.createElement('span');
-    lessSpan.textContent = 'Less';
-    legend.appendChild(lessSpan);
-    for (let i = 0; i <= 4; i++) {
-      const lc = document.createElement('div');
-      lc.className = 'contrib-cell contrib-level-' + i;
-      legend.appendChild(lc);
+    // Legend — render into header row beside streak stats
+    const legendEl = document.getElementById('streakLegend');
+    if (legendEl) {
+      legendEl.innerHTML = '';
+      const lessSpan = document.createElement('span');
+      lessSpan.textContent = 'Less';
+      legendEl.appendChild(lessSpan);
+      for (let i = 0; i <= 4; i++) {
+        const lc = document.createElement('div');
+        lc.className = 'contrib-cell contrib-level-' + i;
+        legendEl.appendChild(lc);
+      }
+      const moreSpan = document.createElement('span');
+      moreSpan.textContent = 'More';
+      legendEl.appendChild(moreSpan);
     }
-    const moreSpan = document.createElement('span');
-    moreSpan.textContent = 'More';
-    legend.appendChild(moreSpan);
-    frag.appendChild(legend);
 
     calendarEl.replaceChildren(frag);
   } catch (e) {

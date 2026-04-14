@@ -1477,9 +1477,8 @@ body.light-theme .streak-day { border-color: #d1d1d6; }
 .contrib-graph-wrapper { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
 .contrib-graph-wrapper::-webkit-scrollbar { height: 4px; }
 .contrib-graph-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-.contrib-months { display: flex; align-items: flex-end; margin-bottom: 4px; padding-left: 30px; }
-.contrib-month-label { font-size: 10px; color: var(--text-muted); text-align: left; overflow: visible; white-space: nowrap; flex-shrink: 0; }
-.contrib-label { width: 0; min-width: 0; }
+.contrib-months { position: relative; height: 16px; margin-bottom: 2px; margin-left: 28px; }
+.contrib-month-label { position: absolute; top: 0; font-size: 10px; color: var(--text-muted); white-space: nowrap; }
 .contrib-grid { display: inline-flex; gap: 0; }
 .contrib-days { display: flex; flex-direction: column; padding-top: 0; margin-right: 4px; }
 .contrib-day-label { width: 24px; height: 13px; font-size: 9px; color: var(--text-muted); display: flex; align-items: center; }

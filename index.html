@@ -345,19 +345,22 @@
         </div>
         <div class="card">
           <h3 class="card-title">Activity Streak</h3>
-          <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span style="font-size:28px;">🔥</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:16px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:28px;">🔥</span>
+                <div>
+                  <div style="font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent);line-height:1;" id="currentStreak">0</div>
+                  <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Current</div>
+                </div>
+              </div>
+              <div style="width:1px;height:32px;background:var(--border);"></div>
               <div>
-                <div style="font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent);line-height:1;" id="currentStreak">0</div>
-                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Current</div>
+                <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1;" id="longestStreak">0</div>
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Longest</div>
               </div>
             </div>
-            <div style="width:1px;height:32px;background:var(--border);"></div>
-            <div>
-              <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1;" id="longestStreak">0</div>
-              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Longest</div>
-            </div>
+            <div id="streakLegend" class="contrib-legend" style="margin-top:0;"></div>
           </div>
           <div id="streakCalendar" class="contrib-graph-wrapper"></div>
         </div>
