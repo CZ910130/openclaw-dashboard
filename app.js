@@ -3415,6 +3415,15 @@ function calculateStreak() {
     }
 
     calendarEl.replaceChildren(frag);
+
+    // Align legend right edge with grid right edge
+    if (legendEl) {
+      const headerDiv = legendEl.parentElement;
+      const gridEl = calendarEl.querySelector('.contrib-grid');
+      if (headerDiv && gridEl) {
+        legendEl.style.right = (headerDiv.offsetWidth - gridEl.offsetWidth) + 'px';
+      }
+    }
   } catch (e) {
     console.error('Streak calculation error:', e);
   }
