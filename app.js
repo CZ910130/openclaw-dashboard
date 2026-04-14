@@ -3341,10 +3341,16 @@ function calculateStreak() {
     // Build DOM instead of innerHTML for safety
     const frag = document.createDocumentFragment();
 
+    // Dynamic cell size to fill card width
+    const dayLabelWidth = 28;
+    const gapPx = 3;
+    const availWidth = calendarEl.parentElement.clientWidth - dayLabelWidth;
+    const dynamicCell = Math.max(10, Math.min(14, Math.floor((availWidth - (weeks.length - 1) * gapPx) / weeks.length)));
+    const weekPx = dynamicCell + gapPx;
+
     // Month labels — positioned absolutely above the grid columns
     const monthRow = document.createElement('div');
     monthRow.className = 'contrib-months';
-    const weekPx = 16; // 13px cell + 3px gap
     let lastMonth = -1;
     for (let wi = 0; wi < weeks.length; wi++) {
       const firstDay = new Date(weeks[wi][0].date);
@@ -3382,6 +3388,8 @@ function calculateStreak() {
       for (let row = 0; row < 7; row++) {
         const cell = document.createElement('div');
         cell.className = 'contrib-cell';
+        cell.style.width = dynamicCell + 'px';
+        cell.style.height = dynamicCell + 'px';
         if (row < week.length) {
           const entry = week[row];
           const isFuture = new Date(entry.date) > today;

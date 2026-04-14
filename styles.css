@@ -1474,7 +1474,7 @@ body.light-theme svg text { fill: #4a4a4f; }
 body.light-theme .streak-day { border-color: #d1d1d6; }
 
 /* GitHub-style contribution graph */
-.contrib-graph-wrapper { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+.contrib-graph-wrapper { overflow-x: auto; overflow-y: hidden; padding: 4px 0; min-width: 0; }
 .contrib-graph-wrapper::-webkit-scrollbar { height: 4px; }
 .contrib-graph-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 .contrib-months { position: relative; height: 16px; margin-bottom: 2px; margin-left: 27px; }
