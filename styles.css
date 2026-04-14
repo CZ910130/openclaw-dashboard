@@ -1474,26 +1474,28 @@ body.light-theme svg text { fill: #4a4a4f; }
 body.light-theme .streak-day { border-color: #d1d1d6; }
 
 /* GitHub-style contribution graph */
-.contrib-graph-wrapper { overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; }
-.contrib-months { display: flex; gap: 0; padding-left: 0; margin-bottom: 2px; }
-.contrib-month-label { width: 13px; min-width: 13px; font-size: 10px; color: var(--text-muted); text-align: left; }
-.contrib-label { width: 28px; min-width: 28px; }
-.contrib-grid { display: flex; gap: 0; }
-.contrib-days { display: flex; flex-direction: column; gap: 2px; margin-right: 4px; }
-.contrib-day-label { width: 24px; height: 11px; font-size: 9px; color: var(--text-muted); line-height: 11px; }
-.contrib-col { display: flex; flex-direction: column; gap: 2px; }
-.contrib-cell { width: 11px; height: 11px; border-radius: 2px; }
+.contrib-graph-wrapper { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+.contrib-graph-wrapper::-webkit-scrollbar { height: 4px; }
+.contrib-graph-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.contrib-months { display: flex; align-items: flex-end; margin-bottom: 4px; padding-left: 30px; }
+.contrib-month-label { font-size: 10px; color: var(--text-muted); text-align: left; overflow: visible; white-space: nowrap; flex-shrink: 0; }
+.contrib-label { width: 0; min-width: 0; }
+.contrib-grid { display: inline-flex; gap: 0; }
+.contrib-days { display: flex; flex-direction: column; padding-top: 0; margin-right: 4px; }
+.contrib-day-label { width: 24px; height: 13px; font-size: 9px; color: var(--text-muted); display: flex; align-items: center; }
+.contrib-col { display: flex; flex-direction: column; gap: 3px; }
+.contrib-cell { width: 13px; height: 13px; border-radius: 2px; flex-shrink: 0; }
 .contrib-level--1 { background: transparent; }
-.contrib-level-0 { background: var(--bg-tertiary); opacity: 0.4; }
+.contrib-level-0 { background: #161b22; }
 .contrib-level-1 { background: #0e4429; }
 .contrib-level-2 { background: #006d32; }
 .contrib-level-3 { background: #26a641; }
 .contrib-level-4 { background: #39d353; }
 .contrib-legend { display: flex; align-items: center; gap: 3px; margin-top: 8px; justify-content: flex-end; font-size: 10px; color: var(--text-muted); }
-.contrib-legend .contrib-cell { width: 10px; height: 10px; }
+.contrib-legend .contrib-cell { width: 12px; height: 12px; }
 
 /* Light theme overrides for contribution graph */
-body.light-theme .contrib-level-0 { background: #ebedf0; opacity: 1; }
+body.light-theme .contrib-level-0 { background: #ebedf0; }
 body.light-theme .contrib-level-1 { background: #9be9a8; }
 body.light-theme .contrib-level-2 { background: #40c463; }
 body.light-theme .contrib-level-3 { background: #30a14e; }

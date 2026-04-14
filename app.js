@@ -3341,23 +3341,32 @@ function calculateStreak() {
     // Build DOM instead of innerHTML for safety
     const frag = document.createDocumentFragment();
 
-    // Month labels row
+    // Month labels row — each label spans the correct number of week columns
     const monthRow = document.createElement('div');
     monthRow.className = 'contrib-months';
-    const corner = document.createElement('div');
-    corner.className = 'contrib-label';
-    monthRow.appendChild(corner);
+    const cellSize = 16; // 13px cell + 3px gap
     let lastMonth = -1;
-    for (const week of weeks) {
-      const ml = document.createElement('div');
-      ml.className = 'contrib-month-label';
-      const firstDay = new Date(week[0].date);
+    let monthStart = 0;
+    for (let wi = 0; wi < weeks.length; wi++) {
+      const firstDay = new Date(weeks[wi][0].date);
       const m = firstDay.getMonth();
-      if (m !== lastMonth && firstDay.getDate() <= 7) {
+      if (m !== lastMonth) {
+        if (lastMonth >= 0) {
+          // Set width of previous label to span its weeks
+          const prevLabel = monthRow.lastElementChild;
+          if (prevLabel) prevLabel.style.width = ((wi - monthStart) * cellSize) + 'px';
+        }
+        const ml = document.createElement('div');
+        ml.className = 'contrib-month-label';
         ml.textContent = months[m];
+        monthRow.appendChild(ml);
         lastMonth = m;
+        monthStart = wi;
       }
-      monthRow.appendChild(ml);
+    }
+    // Set width for last month label
+    if (monthRow.lastElementChild && weeks.length > monthStart) {
+      monthRow.lastElementChild.style.width = ((weeks.length - monthStart) * cellSize) + 'px';
     }
     frag.appendChild(monthRow);
 
