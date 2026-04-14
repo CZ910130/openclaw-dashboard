@@ -1823,15 +1823,15 @@ async function scrapeOpenAIUsage() {
   }
 }
 
-let _cachedMiniMaxUsage = null;
-async function fetchMiniMaxUsage() {
+let _cachedOpenCodeGoUsage = null;
+async function fetchOpenCodeGoUsage() {
   try {
-    const r = await authFetch(API_BASE + '/api/minimax-usage');
+    const r = await authFetch(API_BASE + '/api/opencode-go-usage');
     const d = await r.json();
     if (d.error) return;
-    _cachedMiniMaxUsage = d;
-    _setUsageBar('minimaxSession', d.session);
-    const ts = document.getElementById('minimaxUsageScrapedAt');
+    _cachedOpenCodeGoUsage = d;
+    _setUsageBar('opencodeGoSession', d.session);
+    const ts = document.getElementById('opencodeGoUsageScrapedAt');
     if (ts && d.scraped_at) {
       const ago = Math.round((Date.now() - new Date(d.scraped_at).getTime()) / 60000);
       ts.textContent = ago < 1 ? 'Just now' : ago + 'm ago';
@@ -1839,23 +1839,23 @@ async function fetchMiniMaxUsage() {
   } catch {}
 }
 
-async function scrapeMiniMaxUsage() {
-  const btn = document.getElementById('minimaxScrapeBtn');
+async function scrapeOpenCodeGoUsage() {
+  const btn = document.getElementById('opencodeGoScrapeBtn');
   if (!btn) return;
   const origText = btn.textContent;
   btn.textContent = '⏳ Refreshing...';
   btn.disabled = true;
   try {
-    await authFetch(API_BASE + '/api/minimax-usage-scrape', { method: 'POST' });
-    const oldTs = (_cachedMiniMaxUsage && _cachedMiniMaxUsage.scraped_at) || '';
+    await authFetch(API_BASE + '/api/opencode-go-usage-scrape', { method: 'POST' });
+    const oldTs = (_cachedOpenCodeGoUsage && _cachedOpenCodeGoUsage.scraped_at) || '';
     for (let i = 0; i < 5; i++) {
       await new Promise(r => setTimeout(r, 1200));
-      await fetchMiniMaxUsage();
-      if (_cachedMiniMaxUsage && _cachedMiniMaxUsage.scraped_at && _cachedMiniMaxUsage.scraped_at !== oldTs) break;
+      await fetchOpenCodeGoUsage();
+      if (_cachedOpenCodeGoUsage && _cachedOpenCodeGoUsage.scraped_at && _cachedOpenCodeGoUsage.scraped_at !== oldTs) break;
     }
-    showToast('MiniMax usage refreshed', 'success');
+    showToast('OpenCode-Go usage refreshed', 'success');
   } catch(e) {
-    showToast('Failed to refresh MiniMax usage', 'danger');
+    showToast('Failed to refresh OpenCode-Go usage', 'danger');
   } finally {
     btn.textContent = origText;
     btn.disabled = false;
@@ -1892,7 +1892,8 @@ visibleInterval(fetchClaudeUsage, 60000);
 
 let _currentProvider = localStorage.getItem('usageProvider') || 'claude';
 if (_currentProvider === 'glm') _currentProvider = 'openai';
-if (_currentProvider === 'kimi') _currentProvider = 'minimax';
+if (_currentProvider === 'kimi') _currentProvider = 'opencode-go';
+if (_currentProvider === 'minimax') _currentProvider = 'opencode-go';
 
 let _currentModel = localStorage.getItem('usageModel') || 'session';
 
@@ -1904,14 +1905,14 @@ const _claudeModels = [
 const _openaiModels = [
   { value: 'session', label: 'Last 24h' }
 ];
-const _minimaxModels = [
+const _opencodeGoModels = [
   { value: 'session', label: 'Last 24h' }
 ];
 
 function _getProviderModelOptions() {
   if (_currentProvider === 'claude') return _claudeModels;
   if (_currentProvider === 'openai') return _openaiModels;
-  if (_currentProvider === 'minimax') return _minimaxModels;
+  if (_currentProvider === 'opencode-go') return _opencodeGoModels;
   return _claudeModels;
 }
 
@@ -1962,10 +1963,10 @@ function updateOverviewOpenAI() {
   _setOverviewBar(d.percent, d.label || d.detail || '');
 }
 
-function updateOverviewMiniMax() {
+function updateOverviewOpenCodeGo() {
   _populateModelSelect();
-  if (!_cachedMiniMaxUsage || !_cachedMiniMaxUsage.session) return;
-  const d = _cachedMiniMaxUsage.session;
+  if (!_cachedOpenCodeGoUsage || !_cachedOpenCodeGoUsage.session) return;
+  const d = _cachedOpenCodeGoUsage.session;
   _setOverviewBar(d.percent, d.label || d.detail || '');
 }
 
@@ -1975,11 +1976,11 @@ function switchModel(val) {
     ? 'claudeModel'
     : _currentProvider === 'openai'
       ? 'openaiModel'
-      : 'minimaxModel';
+      : 'opencodeGoModel';
   localStorage.setItem(storageKey, val);
   if (_currentProvider === 'claude') updateOverviewClaude();
   else if (_currentProvider === 'openai') updateOverviewOpenAI();
-  else if (_currentProvider === 'minimax') updateOverviewMiniMax();
+  else if (_currentProvider === 'opencode-go') updateOverviewOpenCodeGo();
 }
 
 function switchProvider(prov) {
@@ -1987,7 +1988,7 @@ function switchProvider(prov) {
   localStorage.setItem('usageProvider', prov);
   const cBtn = document.getElementById('provBtnClaude');
   const oBtn = document.getElementById('provBtnOpenAI');
-  const mBtn = document.getElementById('provBtnMiniMax');
+  const mBtn = document.getElementById('provBtnOpenCodeGo');
   
   // Reset all buttons
   if (cBtn) { cBtn.style.background = 'transparent'; cBtn.style.color = 'var(--text-muted)'; }
@@ -2002,10 +2003,10 @@ function switchProvider(prov) {
     if (oBtn) { oBtn.style.background = '#10a37f'; oBtn.style.color = '#fff'; }
     _currentModel = localStorage.getItem('openaiModel') || 'session';
     if (typeof updateOverviewOpenAI === 'function') updateOverviewOpenAI();
-  } else if (prov === 'minimax') {
+  } else if (prov === 'opencode-go') {
     if (mBtn) { mBtn.style.background = '#4285f4'; mBtn.style.color = '#fff'; }
-    _currentModel = localStorage.getItem('minimaxModel') || 'session';
-    if (typeof updateOverviewMiniMax === 'function') updateOverviewMiniMax();
+    _currentModel = localStorage.getItem('opencodeGoModel') || 'session';
+    if (typeof updateOverviewOpenCodeGo === 'function') updateOverviewOpenCodeGo();
   }
   
   if (_usageAutoEntry) {
@@ -2017,11 +2018,11 @@ function switchProvider(prov) {
 function scrapeCurrentProvider() {
   if (_currentProvider === 'claude' && typeof scrapeClaudeUsage === 'function') scrapeClaudeUsage();
   else if (_currentProvider === 'openai' && typeof scrapeOpenAIUsage === 'function') scrapeOpenAIUsage();
-  else if (_currentProvider === 'minimax' && typeof scrapeMiniMaxUsage === 'function') scrapeMiniMaxUsage();
+  else if (_currentProvider === 'opencode-go' && typeof scrapeOpenCodeGoUsage === 'function') scrapeOpenCodeGoUsage();
 }
 
 if (typeof fetchOpenAIUsage === 'function') { fetchOpenAIUsage(); visibleInterval(fetchOpenAIUsage, 60000); }
-if (typeof fetchMiniMaxUsage === 'function') { fetchMiniMaxUsage(); visibleInterval(fetchMiniMaxUsage, 60000); }
+if (typeof fetchOpenCodeGoUsage === 'function') { fetchOpenCodeGoUsage(); visibleInterval(fetchOpenCodeGoUsage, 60000); }
 switchProvider(_currentProvider);
 
 function getProgressColor(pct) {
@@ -2160,7 +2161,7 @@ function updateLimits() {
         else if (shortModel.includes('gemini')) color = '#10b981';  // Green
         else if (shortModel.includes('glm')) color = '#f59e0b';  // Amber/Orange
         else if (shortModel.includes('kimi') || shortModel.includes('k2p5')) color = '#ef4444';  // Red
-        else if (shortModel.includes('minimax') || shortModel.includes('m2.5')) color = '#8b5cf6';  // Violet
+        else if (shortModel.includes('minimax') || shortModel.includes('m2.5') || shortModel.includes('opencode') || shortModel.includes('mimo')) color = '#8b5cf6';  // Violet
         return { model: shortModel, cost, color };
       }).filter(d => d.cost > 0).sort((a, b) => b.cost - a.cost);
       

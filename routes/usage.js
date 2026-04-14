@@ -21,6 +21,10 @@ function setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir) {
       file: path.join(dataDir, 'minimax-usage.json'),
       script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-minimax-usage.sh')
     },
+    'opencode-go': {
+      file: path.join(dataDir, 'opencode-go-usage.json'),
+      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-opencode-go-usage.sh')
+    },
     // Backward-compat aliases for older dashboard clients
     'glm': {
       file: path.join(dataDir, 'openai-usage.json'),
@@ -70,6 +74,7 @@ function setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir) {
     '/api/gemini-usage': 'gemini',
     '/api/openai-usage': 'openai',
     '/api/minimax-usage': 'minimax',
+    '/api/opencode-go-usage': 'opencode-go',
     '/api/glm-usage': 'glm',
     '/api/kimi-usage': 'kimi'
   };
@@ -90,6 +95,7 @@ function setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir) {
     '/api/gemini-usage-scrape': 'gemini',
     '/api/openai-usage-scrape': 'openai',
     '/api/minimax-usage-scrape': 'minimax',
+    '/api/opencode-go-usage-scrape': 'opencode-go',
     '/api/glm-usage-scrape': 'glm',
     '/api/kimi-usage-scrape': 'kimi'
   };

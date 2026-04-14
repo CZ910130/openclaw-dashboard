@@ -16,10 +16,12 @@ OUTPUT_FILE = os.path.join(WORKSPACE_DIR, 'data', f'{PROVIDER_SLOT}-usage.json')
 PROVIDER_PREFIXES = {
     'openai': ['openai-codex', 'openai'],
     'minimax': ['minimax'],
+    'opencode-go': ['opencode-go'],
 }
 DISPLAY_NAME = {
     'openai': 'ChatGPT',
     'minimax': 'MiniMax',
+    'opencode-go': 'OpenCode-Go',
 }
 
 # Fallback prices if explicit cost is missing in message usage
