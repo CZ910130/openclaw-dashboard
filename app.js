@@ -3345,7 +3345,7 @@ function calculateStreak() {
     const dayLabelWidth = 28;
     const gapPx = 3;
     const availWidth = calendarEl.parentElement.clientWidth - dayLabelWidth;
-    const dynamicCell = Math.max(10, Math.min(14, Math.floor((availWidth - (weeks.length - 1) * gapPx) / weeks.length)));
+    const dynamicCell = Math.max(10, Math.min(14, Math.round((availWidth - (weeks.length - 1) * gapPx) / weeks.length)));
     const weekPx = dynamicCell + gapPx;
 
     // Month labels — positioned absolutely above the grid columns
