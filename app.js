@@ -82,47 +82,6 @@ let sysSecAuthed = false;
 const TOKEN_KEY = 'dashboardToken';
 const TOKEN_EXPIRY_KEY = 'dashboardTokenExpiry';
 
-/*
-Legacy token-storage auth path kept commented for recovery/debugging.
-The dashboard now authenticates with cookie-backed sessions instead.
-
-const TOKEN_LIFETIME = 24 * 60 * 60 * 1000;
-const REMEMBER_ME_LIFETIME = 3 * 60 * 60 * 1000;
-
-function getStoredToken() {
-  let token = sessionStorage.getItem(TOKEN_KEY);
-  let expiry = sessionStorage.getItem(TOKEN_EXPIRY_KEY);
-
-  if (!token || !expiry) {
-    token = localStorage.getItem(TOKEN_KEY);
-    expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
-  }
-
-  if (token && expiry) {
-    if (Date.now() < parseInt(expiry)) {
-      return token;
-    }
-    clearStoredToken();
-  }
-  return null;
-}
-
-function setStoredToken(token, rememberMe = false) {
-  if (rememberMe) {
-    const expiry = Date.now() + REMEMBER_ME_LIFETIME;
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(TOKEN_EXPIRY_KEY, expiry.toString());
-    sessionStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(TOKEN_EXPIRY_KEY);
-  } else {
-    sessionStorage.setItem(TOKEN_KEY, token);
-    sessionStorage.setItem(TOKEN_EXPIRY_KEY, (Date.now() + TOKEN_LIFETIME).toString());
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(TOKEN_EXPIRY_KEY);
-  }
-}
-*/
-
 function getStoredToken() {
   return null;
 }
