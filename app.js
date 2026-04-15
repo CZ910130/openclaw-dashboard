@@ -1158,6 +1158,7 @@ let usage = {};
 let systemStats = {};
 let feedPaused = true;
 let liveEventSource = null;
+let liveFeedReconnectTimer = null;
 let sortBy = 'updated';
 let sortDir = 'desc';
 let selectedSessions = new Set();
@@ -2114,7 +2115,7 @@ function _setOverviewBar(pct, label, sourceHint) {
   const sourceEl = document.getElementById('usageSourceHint');
   if (pctEl) pctEl.textContent = pct + '%';
   if (barEl) { barEl.style.width = Math.min(pct, 100) + '%'; barEl.style.background = pct < 50 ? 'var(--green)' : pct < 80 ? '#f59e0b' : '#ef4444'; }
-  if (labelEl) labelEl.textContent = String(label || '').replace(/[<>&]/g, '');
+  if (labelEl) labelEl.textContent = String(label || '');
   if (warnEl) warnEl.style.display = pct >= 80 ? '' : 'none';
   if (sourceEl) sourceEl.textContent = sourceHint || 'Source: provider/local';
 }
@@ -2641,18 +2642,32 @@ function applyFeedFilter() {
 
 function connectLiveFeed() {
   if (liveEventSource) return;
+  if (liveFeedReconnectTimer) {
+    clearTimeout(liveFeedReconnectTimer);
+    liveFeedReconnectTimer = null;
+  }
   
   // Populate session filter from known sessions
   const sel = document.getElementById('feedSessionFilter');
   if (sel && sessions.length) {
     const current = sel.value;
-    const opts = ['<option value="all">All Sessions</option>'];
     const seen = new Set();
+    sel.innerHTML = '';
+
+    const allOpt = document.createElement('option');
+    allOpt.value = 'all';
+    allOpt.textContent = 'All Sessions';
+    sel.appendChild(allOpt);
+
     sessions.forEach(s => {
       const label = s.label || s.key.split(':').slice(2).join(':') || s.key;
-      if (!seen.has(label)) { seen.add(label); opts.push(`<option value="${label}">${label}</option>`); }
+      if (seen.has(label)) return;
+      seen.add(label);
+      const opt = document.createElement('option');
+      opt.value = label;
+      opt.textContent = label;
+      sel.appendChild(opt);
     });
-    sel.innerHTML = opts.join('');
     sel.value = current || 'all';
   }
 
@@ -2748,7 +2763,12 @@ function connectLiveFeed() {
     console.error('Live feed disconnected');
     liveEventSource.close();
     liveEventSource = null;
-    setTimeout(connectLiveFeed, 5000);
+    if (!liveFeedReconnectTimer) {
+      liveFeedReconnectTimer = setTimeout(() => {
+        liveFeedReconnectTimer = null;
+        connectLiveFeed();
+      }, 5000);
+    }
   };
 }
 
@@ -3957,7 +3977,7 @@ async function fetchLogs() {
     viewer.textContent = logs;
     viewer.scrollTop = viewer.scrollHeight;
   } catch (e) {
-    viewer.innerHTML = '<div style="color:var(--red);">Failed to load logs: ' + e.message + '</div>';
+    viewer.innerHTML = '<div style="color:var(--red);">Failed to load logs: ' + escapeHtml(e.message) + '</div>';
   }
 }
 
@@ -4083,18 +4103,25 @@ setTimeout(() => {
   updatePageTitle();
 }, 2000);
 
+function syncThemeToggleButtons(isLight) {
+  ['themeToggle', 'themeToggleMobile'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.textContent = isLight ? '☀️' : '🌙';
+  });
+}
+
 function toggleTheme() {
-  const btn = document.getElementById('themeToggle');
   document.body.classList.toggle('light-theme');
   const isLight = document.body.classList.contains('light-theme');
   localStorage.setItem('theme', isLight ? 'light' : 'dark');
-  btn.textContent = isLight ? '☀️' : '🌙';
+  syncThemeToggleButtons(isLight);
 }
 (function() {
-  if (localStorage.getItem('theme') === 'light') {
+  const isLight = localStorage.getItem('theme') === 'light';
+  if (isLight) {
     document.body.classList.add('light-theme');
-    document.getElementById('themeToggle').textContent = '☀️';
   }
+  syncThemeToggleButtons(isLight);
 })();
 
 async function fetchSysSecurity() {
