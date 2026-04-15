@@ -1675,21 +1675,53 @@ function toggleSessionExpand(key, e) {
   detail.id = 'expanded-' + key;
   detail.className = 'session-expanded';
   detail.style.cssText = 'padding:16px 20px;background:var(--bg-tertiary);border-bottom:1px solid var(--border);animation:fadeIn 0.2s ease;';
-  detail.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;">
-      <div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Session Key</div><div class="mono" style="font-size:11px;word-break:break-all;">${s.key}</div></div>
-      <div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Model</div><div class="mono" style="font-size:12px;color:${modelColor};">${s.model.split('/').pop()}</div></div>
-      <div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Tokens</div><div class="mono" style="font-size:12px;">${(s.totalTokens||0).toLocaleString()}</div></div>
-      <div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Cost</div><div class="mono" style="font-size:12px;">$${(s.cost||0).toFixed(2)}</div></div>
-      <div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Channel</div><div style="font-size:12px;">${s.channel||'--'}</div></div>
-      <div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Created</div><div style="font-size:12px;">${createdAgo}</div></div>
-      <div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Last Active</div><div style="font-size:12px;">${ago}</div></div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <span style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;">Recent Messages</span>
-      <button onclick="openSessionDetail('${escapeJsString(s.key)}')" style="background:var(--accent);color:white;border:none;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">Full View</button>
-    </div>
-    <div id="expanded-msgs-${CSS.escape(key)}" style="font-size:12px;color:var(--text-muted);">Loading...</div>`;
+
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;';
+  [
+    ['Session Key', s.key, 'mono', '11px', null],
+    ['Model', s.model.split('/').pop(), 'mono', '12px', modelColor],
+    ['Tokens', (s.totalTokens||0).toLocaleString(), 'mono', '12px', null],
+    ['Cost', '$' + (s.cost||0).toFixed(2), 'mono', '12px', null],
+    ['Channel', s.channel || '--', '', '12px', null],
+    ['Created', createdAgo, '', '12px', null],
+    ['Last Active', ago, '', '12px', null]
+  ].forEach(([label, value, cls, fontSize, color]) => {
+    const cell = document.createElement('div');
+    const labelEl = document.createElement('div');
+    labelEl.style.cssText = 'font-size:10px;color:var(--text-muted);text-transform:uppercase;';
+    labelEl.textContent = label;
+    const valueEl = document.createElement('div');
+    if (cls) valueEl.className = cls;
+    valueEl.style.fontSize = fontSize;
+    if (label === 'Session Key') valueEl.style.wordBreak = 'break-all';
+    if (color) valueEl.style.color = color;
+    valueEl.textContent = value;
+    cell.appendChild(labelEl);
+    cell.appendChild(valueEl);
+    grid.appendChild(cell);
+  });
+
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;';
+  const title = document.createElement('span');
+  title.style.cssText = 'font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;';
+  title.textContent = 'Recent Messages';
+  const fullBtn = document.createElement('button');
+  fullBtn.textContent = 'Full View';
+  fullBtn.style.cssText = 'background:var(--accent);color:white;border:none;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;';
+  fullBtn.onclick = () => openSessionDetail(s.key);
+  header.appendChild(title);
+  header.appendChild(fullBtn);
+
+  const msgs = document.createElement('div');
+  msgs.id = 'expanded-msgs-' + CSS.escape(key);
+  msgs.style.cssText = 'font-size:12px;color:var(--text-muted);';
+  msgs.textContent = 'Loading...';
+
+  detail.appendChild(grid);
+  detail.appendChild(header);
+  detail.appendChild(msgs);
   row.after(detail);
 
   refreshExpandedMessages(key);
@@ -3186,17 +3218,24 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSession
 function showToast(message, type = 'info', duration = 4000) {
   const container = document.getElementById('toastContainer');
   if (!container) return;
-  
+
   const icons = { success: '✅', warning: '⚠️', info: 'ℹ️' };
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  toast.innerHTML = `
-    <div class="toast-icon">${icons[type] || icons.info}</div>
-    <div class="toast-content">
-      <div class="toast-message">${message}</div>
-    </div>
-  `;
-  
+
+  const iconEl = document.createElement('div');
+  iconEl.className = 'toast-icon';
+  iconEl.textContent = icons[type] || icons.info;
+
+  const contentEl = document.createElement('div');
+  contentEl.className = 'toast-content';
+  const messageEl = document.createElement('div');
+  messageEl.className = 'toast-message';
+  messageEl.textContent = String(message || '');
+  contentEl.appendChild(messageEl);
+
+  toast.appendChild(iconEl);
+  toast.appendChild(contentEl);
   container.appendChild(toast);
   
   setTimeout(() => {
@@ -3270,50 +3309,66 @@ async function fetchTailscaleStatus() {
   try {
     const res = await authFetch(API_BASE + '/api/tailscale');
     const data = await res.json();
-    
+
     const statusEl = document.getElementById('tailscaleStatus');
     if (!statusEl) return;
-    
+
     if (data.error) {
-      statusEl.innerHTML = `<div style="color:var(--text-muted);">${escapeHtml(data.error)}</div>`;
+      statusEl.innerHTML = '';
+      const msg = document.createElement('div');
+      msg.style.color = 'var(--text-muted)';
+      msg.textContent = data.error;
+      statusEl.appendChild(msg);
       return;
     }
-    
-    const onlineColor = data.online ? 'var(--green)' : 'var(--red)';
-    const onlineText = data.online ? 'Online' : 'Offline';
-    
-    let html = `
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
-        <span style="color:var(--text-muted);">Status</span>
-        <span style="color:${onlineColor};font-weight:600;">${onlineText}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
-        <span style="color:var(--text-muted);">Device</span>
-        <span class="mono" style="font-size:13px;">${data.hostname}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
-        <span style="color:var(--text-muted);">Tailnet IP</span>
-        <span class="mono" style="font-size:13px;">${data.ip}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:8px 0;">
-        <span style="color:var(--text-muted);">Connected Peers</span>
-        <span style="font-weight:600;">${data.peers}</span>
-      </div>
-    `;
-    
+
+    statusEl.innerHTML = '';
+    const rows = [
+      ['Status', data.online ? 'Online' : 'Offline', data.online ? 'var(--green)' : 'var(--red)', false],
+      ['Device', data.hostname, null, true],
+      ['Tailnet IP', data.ip, null, true],
+      ['Connected Peers', String(data.peers), null, false]
+    ];
+    rows.forEach((row, idx) => {
+      const el = document.createElement('div');
+      el.style.cssText = `display:flex;justify-content:space-between;padding:8px 0;${idx < rows.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}`;
+      const left = document.createElement('span');
+      left.style.color = 'var(--text-muted)';
+      left.textContent = row[0];
+      const right = document.createElement('span');
+      if (row[2]) right.style.cssText = `color:${row[2]};font-weight:600;`;
+      if (row[3]) right.className = 'mono';
+      if (row[3]) right.style.fontSize = '13px';
+      right.textContent = row[1] || '--';
+      el.appendChild(left);
+      el.appendChild(right);
+      statusEl.appendChild(el);
+    });
+
     if (data.routes && data.routes.length > 0) {
-      html += `
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">Active Routes</div>
-          ${data.routes.map(r => `<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-secondary);margin-bottom:4px;">${r}</div>`).join('')}
-        </div>
-      `;
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'margin-top:12px;padding-top:12px;border-top:1px solid var(--border);';
+      const title = document.createElement('div');
+      title.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;';
+      title.textContent = 'Active Routes';
+      wrap.appendChild(title);
+      data.routes.forEach(r => {
+        const line = document.createElement('div');
+        line.style.cssText = "font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-secondary);margin-bottom:4px;";
+        line.textContent = r;
+        wrap.appendChild(line);
+      });
+      statusEl.appendChild(wrap);
     }
-    
-    statusEl.innerHTML = html;
   } catch (e) {
     const statusEl = document.getElementById('tailscaleStatus');
-    if (statusEl) statusEl.innerHTML = '<div style="color:var(--text-muted);">Failed to load</div>';
+    if (statusEl) {
+      statusEl.innerHTML = '';
+      const msg = document.createElement('div');
+      msg.style.color = 'var(--text-muted)';
+      msg.textContent = 'Failed to load';
+      statusEl.appendChild(msg);
+    }
   }
 }
 
@@ -3651,19 +3706,60 @@ function showReauthModal(targetPage) {
     overlay = document.createElement('div');
     overlay.id = 'reauthOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:600;display:flex;align-items:center;justify-content:center;';
-    overlay.innerHTML = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:380px;width:90%;">' +
-      '<h3 style="margin-bottom:8px;">🔒 Re-authentication Required</h3>' +
-      '<p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">Enter your credentials to access System Security.</p>' +
-      '<input type="password" id="reauthPass" placeholder="Password" style="width:100%;padding:12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;margin-bottom:12px;">' +
-      '<input type="text" id="reauthTotp" placeholder="Authenticator Code (if enabled)" style="width:100%;padding:12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;margin-bottom:12px;font-family:JetBrains Mono,monospace;" maxlength="6" autocomplete="one-time-code">' +
-      '<div id="reauthError" style="display:none;color:var(--red);font-size:12px;margin-bottom:12px;padding:8px;background:rgba(239,68,68,0.1);border-radius:6px;"></div>' +
-      '<div style="display:flex;gap:8px;">' +
-      '<button onclick="submitReauth()" style="flex:1;padding:12px;background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Verify</button>' +
-      '<button onclick="cancelReauth()" style="flex:1;padding:12px;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-weight:500;cursor:pointer;">Cancel</button>' +
-      '</div></div>';
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:380px;width:90%;';
+
+    const title = document.createElement('h3');
+    title.style.marginBottom = '8px';
+    title.textContent = '🔒 Re-authentication Required';
+
+    const desc = document.createElement('p');
+    desc.style.cssText = 'font-size:13px;color:var(--text-secondary);margin-bottom:20px;';
+    desc.textContent = 'Enter your credentials to access System Security.';
+
+    const pass = document.createElement('input');
+    pass.type = 'password';
+    pass.id = 'reauthPass';
+    pass.placeholder = 'Password';
+    pass.style.cssText = 'width:100%;padding:12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;margin-bottom:12px;';
+
+    const totp = document.createElement('input');
+    totp.type = 'text';
+    totp.id = 'reauthTotp';
+    totp.placeholder = 'Authenticator Code (if enabled)';
+    totp.maxLength = 6;
+    totp.autocomplete = 'one-time-code';
+    totp.style.cssText = "width:100%;padding:12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;margin-bottom:12px;font-family:JetBrains Mono,monospace;";
+
+    const error = document.createElement('div');
+    error.id = 'reauthError';
+    error.style.cssText = 'display:none;color:var(--red);font-size:12px;margin-bottom:12px;padding:8px;background:rgba(239,68,68,0.1);border-radius:6px;';
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:8px;';
+    const verifyBtn = document.createElement('button');
+    verifyBtn.textContent = 'Verify';
+    verifyBtn.style.cssText = 'flex:1;padding:12px;background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;';
+    verifyBtn.onclick = () => submitReauth();
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = 'flex:1;padding:12px;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-weight:500;cursor:pointer;';
+    cancelBtn.onclick = () => cancelReauth();
+    actions.appendChild(verifyBtn);
+    actions.appendChild(cancelBtn);
+
+    panel.appendChild(title);
+    panel.appendChild(desc);
+    panel.appendChild(pass);
+    panel.appendChild(totp);
+    panel.appendChild(error);
+    panel.appendChild(actions);
+    overlay.appendChild(panel);
     document.body.appendChild(overlay);
-    document.getElementById('reauthPass').addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('reauthTotp').focus(); });
-    document.getElementById('reauthTotp').addEventListener('keydown', e => { if(e.key === 'Enter') submitReauth(); });
+
+    pass.addEventListener('keydown', e => { if (e.key === 'Enter') totp.focus(); });
+    totp.addEventListener('keydown', e => { if (e.key === 'Enter') submitReauth(); });
   }
   overlay.style.display = 'flex';
   document.getElementById('reauthPass').value = '';
