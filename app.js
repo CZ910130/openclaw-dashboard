@@ -998,7 +998,7 @@ async function checkMFAStatus() {
   }
 }
 
-function generateQRCode(text) {
+function generateQRCodeDataUrl(text) {
   const qr = qrcodegen.QrCode.encodeText(text, qrcodegen.QrCode.Ecc.MEDIUM);
   const border = 4;
   const s = qr.size + border * 2;
@@ -1014,8 +1014,7 @@ function generateQRCode(text) {
   }
   svg += `<path d="${path}" fill="#000000"/>`;
   svg += '</svg>';
-  const b64 = btoa(svg);
-  return `<img src="data:image/svg+xml;base64,${b64}" width="256" height="256" style="image-rendering:pixelated;">`;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
 }
 
 async function setupMFA() {
@@ -1032,9 +1031,13 @@ async function setupMFA() {
       const qrCodeContainer = document.getElementById('qrCodeContainer');
       if (qrCodeContainer) {
         qrCodeContainer.innerHTML = '';
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = generateQRCode(data.otpauth_uri);
-        if (wrapper.firstElementChild) qrCodeContainer.appendChild(wrapper.firstElementChild);
+        const img = document.createElement('img');
+        img.src = generateQRCodeDataUrl(data.otpauth_uri);
+        img.width = 256;
+        img.height = 256;
+        img.style.imageRendering = 'pixelated';
+        img.alt = 'MFA QR code';
+        qrCodeContainer.appendChild(img);
       }
       document.getElementById('mfaDisabledView').style.display = 'none';
       document.getElementById('mfaSetupView').style.display = 'block';
@@ -1360,55 +1363,77 @@ function updateOverview() {
     })
     .slice(0, 8);
   
-  const activityHtml = recent.map(s => {
-    const age = Date.now() - s.updatedAt;
-    const ago = age < 60000 ? 'just now' :
-                age < 3600000 ? Math.round(age / 60000) + 'm ago' :
-                age < 86400000 ? Math.round(age / 3600000) + 'h ago' :
-                Math.round(age / 86400000) + 'd ago';
-    
-    const isActive = age < 300000 && !s.aborted;
-    const typeClass = s.key.includes('subagent') ? 'sub' :
-                      s.key.includes('cron') ? 'cron' :
-                      s.kind === 'group' ? 'group' : 'main';
-    
-    const badgeText = s.key.includes('subagent') ? 'sub' :
-                      s.key.includes('cron') ? 'cron' :
-                      s.kind === 'group' ? 'group' : 'main';
-    
-    const tokens = s.totalTokens || 0;
-    const tokStr = tokens >= 1000 ? (tokens / 1000).toFixed(0) + 'k' : tokens;
-    const costStr = s.cost > 0 ? '$' + s.cost.toFixed(2) : '';
-    const snippet = s.lastMessage ? escapeHtml(s.lastMessage) : '';
-    
-    const dur = s.createdAt ? Date.now() - s.createdAt : 0;
-    const durStr = dur > 86400000 ? Math.floor(dur / 86400000) + 'd' :
-                   dur > 3600000 ? Math.floor(dur / 3600000) + 'h' :
-                   dur > 60000 ? Math.floor(dur / 60000) + 'm' : '';
-    
-    return `
-      <div class="activity-item type-${typeClass} ${isActive ? 'running' : ''}" onclick="openSessionDetail('${escapeJsString(s.key)}')">
-        <div class="activity-dot ${isActive ? 'running' : ''}"></div>
-        <div class="activity-content">
-          <div class="activity-header">
-            <span class="activity-name">${escapeHtml(s.label)}</span><span class="badge ${badgeText}">${badgeText}</span>
-            <span class="activity-time">${ago}</span>
-          </div>
-          ${snippet ? `<div class="activity-snippet">${snippet}</div>` : ''}
-          <div class="activity-meta">
-            <span>${escapeHtml(s.model.split('/').pop())}</span>
-            <span>${tokStr} tok</span>
-            ${costStr ? `<span>${costStr}</span>` : ''}
-            ${durStr ? `<span>⏱ ${durStr}</span>` : ''}
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-  
   const recentActivityEl = document.getElementById('recentActivity');
-  if (activityHtml) recentActivityEl.innerHTML = activityHtml;
-  else setEmptyState(recentActivityEl, 'No recent activity', '📭');
+  if (!recent.length) {
+    setEmptyState(recentActivityEl, 'No recent activity', '📭');
+  } else {
+    recentActivityEl.innerHTML = '';
+    recent.forEach(s => {
+      const age = Date.now() - s.updatedAt;
+      const ago = age < 60000 ? 'just now' :
+                  age < 3600000 ? Math.round(age / 60000) + 'm ago' :
+                  age < 86400000 ? Math.round(age / 3600000) + 'h ago' :
+                  Math.round(age / 86400000) + 'd ago';
+      const isActive = age < 300000 && !s.aborted;
+      const typeClass = s.key.includes('subagent') ? 'sub' :
+                        s.key.includes('cron') ? 'cron' :
+                        s.kind === 'group' ? 'group' : 'main';
+      const badgeText = typeClass;
+      const tokens = s.totalTokens || 0;
+      const tokStr = tokens >= 1000 ? (tokens / 1000).toFixed(0) + 'k' : String(tokens);
+      const costStr = s.cost > 0 ? '$' + s.cost.toFixed(2) : '';
+      const dur = s.createdAt ? Date.now() - s.createdAt : 0;
+      const durStr = dur > 86400000 ? Math.floor(dur / 86400000) + 'd' :
+                     dur > 3600000 ? Math.floor(dur / 3600000) + 'h' :
+                     dur > 60000 ? Math.floor(dur / 60000) + 'm' : '';
+
+      const item = document.createElement('div');
+      item.className = `activity-item type-${typeClass} ${isActive ? 'running' : ''}`.trim();
+      item.onclick = () => openSessionDetail(s.key);
+
+      const dot = document.createElement('div');
+      dot.className = `activity-dot ${isActive ? 'running' : ''}`.trim();
+      item.appendChild(dot);
+
+      const content = document.createElement('div');
+      content.className = 'activity-content';
+
+      const header = document.createElement('div');
+      header.className = 'activity-header';
+      const name = document.createElement('span');
+      name.className = 'activity-name';
+      name.textContent = s.label;
+      const badge = document.createElement('span');
+      badge.className = `badge ${badgeText}`;
+      badge.textContent = badgeText;
+      const time = document.createElement('span');
+      time.className = 'activity-time';
+      time.textContent = ago;
+      header.appendChild(name);
+      header.appendChild(badge);
+      header.appendChild(time);
+      content.appendChild(header);
+
+      if (s.lastMessage) {
+        const snippet = document.createElement('div');
+        snippet.className = 'activity-snippet';
+        snippet.textContent = s.lastMessage;
+        content.appendChild(snippet);
+      }
+
+      const meta = document.createElement('div');
+      meta.className = 'activity-meta';
+      [s.model.split('/').pop(), tokStr + ' tok', costStr, durStr ? '⏱ ' + durStr : ''].filter(Boolean).forEach(val => {
+        const span = document.createElement('span');
+        span.textContent = val;
+        meta.appendChild(span);
+      });
+      content.appendChild(meta);
+
+      item.appendChild(content);
+      recentActivityEl.appendChild(item);
+    });
+  }
   
   const perDay = costs.perDay || {};
   const days = Object.keys(perDay).sort().slice(-7);
@@ -1486,15 +1511,35 @@ function refreshExpandedMessages(key) {
     .then(msgs => {
       if (!document.getElementById('expanded-msgs-' + CSS.escape(key))) return;
       const last10 = msgs.slice(-10);
-      el.innerHTML = last10.map(m => {
+      el.innerHTML = '';
+      if (!last10.length) {
+        const empty = document.createElement('div');
+        empty.style.color = 'var(--text-muted)';
+        empty.textContent = 'No messages';
+        el.appendChild(empty);
+        return;
+      }
+      last10.forEach(m => {
         const roleColor = m.role === 'user' ? 'var(--blue)' : m.role === 'assistant' ? 'var(--green)' : 'var(--yellow)';
         const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'}) : '';
-        return `<div style="padding:6px 0;border-bottom:1px solid var(--border);">
-          <span style="font-weight:600;color:${roleColor};text-transform:uppercase;font-size:10px;margin-right:8px;">${escapeHtml(m.role)}</span>
-          <span style="color:var(--text-muted);font-size:10px;">${escapeHtml(time)}</span>
-          <div style="color:var(--text-primary);line-height:1.4;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:2px;">${escapeHtml(m.content)}</div>
-        </div>`;
-      }).join('') || '<div style="color:var(--text-muted);">No messages</div>';
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:6px 0;border-bottom:1px solid var(--border);';
+        const head = document.createElement('div');
+        const role = document.createElement('span');
+        role.style.cssText = `font-weight:600;color:${roleColor};text-transform:uppercase;font-size:10px;margin-right:8px;`;
+        role.textContent = m.role || '';
+        const timeEl = document.createElement('span');
+        timeEl.style.cssText = 'color:var(--text-muted);font-size:10px;';
+        timeEl.textContent = time;
+        head.appendChild(role);
+        head.appendChild(timeEl);
+        const body = document.createElement('div');
+        body.style.cssText = "color:var(--text-primary);line-height:1.4;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:2px;";
+        body.textContent = m.content || '';
+        row.appendChild(head);
+        row.appendChild(body);
+        el.appendChild(row);
+      });
     }).catch(() => {});
 }
 
@@ -3294,16 +3339,32 @@ function openSessionDetail(key) {
     ['Channel', s.channel || '--', null, false]
   ].forEach(([label, value, color, mono]) => {
     const box = document.createElement('div');
-    box.innerHTML = `<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">${escapeHtml(label)}</div><div class="${mono ? 'mono' : ''}" style="font-size:13px;${color ? 'font-weight:600;color:' + color + ';' : ''}">${escapeHtml(value)}</div>`;
+    const labelEl = document.createElement('div');
+    labelEl.style.cssText = 'font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;';
+    labelEl.textContent = label;
+    const valueEl = document.createElement('div');
+    if (mono) valueEl.className = 'mono';
+    valueEl.style.cssText = `font-size:13px;${color ? 'font-weight:600;color:' + color + ';' : ''}`;
+    valueEl.textContent = value;
+    box.appendChild(labelEl);
+    box.appendChild(valueEl);
     modalStats.appendChild(box);
   });
-  modalMessages.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading...</div>';
+  modalMessages.innerHTML = '';
+  const loading = document.createElement('div');
+  loading.style.cssText = 'color:var(--text-muted);font-size:13px;';
+  loading.textContent = 'Loading...';
+  modalMessages.appendChild(loading);
   document.getElementById('sessionModal').style.display = 'flex';
   authFetch(API_BASE + '/api/session-messages?id=' + encodeURIComponent(s.sessionId || s.key))
     .then(r => r.json())
     .then(msgs => {
       if (!msgs.length) {
-        modalMessages.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No messages found</div>';
+        modalMessages.innerHTML = '';
+        const empty = document.createElement('div');
+        empty.style.cssText = 'color:var(--text-muted);font-size:13px;';
+        empty.textContent = 'No messages found';
+        modalMessages.appendChild(empty);
         return;
       }
       modalMessages.innerHTML = '';
@@ -3312,11 +3373,29 @@ function openSessionDetail(key) {
         const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : '';
         const row = document.createElement('div');
         row.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;';
-        row.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-weight:600;color:${roleColor};text-transform:uppercase;font-size:10px;">${escapeHtml(m.role)}</span><span style="color:var(--text-muted);font-size:10px;">${escapeHtml(time)}</span></div><div style="color:var(--text-primary);line-height:1.4;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;">${escapeHtml(m.content)}</div>`;
+        const head = document.createElement('div');
+        head.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:4px;';
+        const role = document.createElement('span');
+        role.style.cssText = `font-weight:600;color:${roleColor};text-transform:uppercase;font-size:10px;`;
+        role.textContent = m.role || '';
+        const timeEl = document.createElement('span');
+        timeEl.style.cssText = 'color:var(--text-muted);font-size:10px;';
+        timeEl.textContent = time;
+        head.appendChild(role);
+        head.appendChild(timeEl);
+        const body = document.createElement('div');
+        body.style.cssText = "color:var(--text-primary);line-height:1.4;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;";
+        body.textContent = m.content || '';
+        row.appendChild(head);
+        row.appendChild(body);
         modalMessages.appendChild(row);
       });
     }).catch(() => {
-      modalMessages.innerHTML = '<div style="color:var(--text-muted);">Failed to load</div>';
+      modalMessages.innerHTML = '';
+      const failed = document.createElement('div');
+      failed.style.color = 'var(--text-muted)';
+      failed.textContent = 'Failed to load';
+      modalMessages.appendChild(failed);
     });
 }
 function closeSessionModal() { document.getElementById('sessionModal').style.display = 'none'; }
