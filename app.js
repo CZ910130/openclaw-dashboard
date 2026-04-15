@@ -98,12 +98,49 @@ function clearStoredToken() {
   sessionStorage.removeItem(TOKEN_EXPIRY_KEY);
 }
 
+const AUTH_HIDDEN_CLASS = 'auth-form-hidden';
+const APP_HIDDEN_CLASS = 'app-hidden';
+const NOTIF_PANEL_OPEN_CLASS = 'notif-panel-open';
+const SESSION_MODAL_OPEN_CLASS = 'session-modal-open';
+const NOTIF_BADGE_VISIBLE_CLASS = 'notification-badge-visible';
+
+function resolveEl(target) {
+  return typeof target === 'string' ? document.getElementById(target) : target;
+}
+
+function setHiddenState(target, hidden, hiddenClass = AUTH_HIDDEN_CLASS) {
+  const el = resolveEl(target);
+  if (!el) return null;
+  el.classList.toggle(hiddenClass, hidden);
+  return el;
+}
+
+function setOpenState(target, isOpen, openClass) {
+  const el = resolveEl(target);
+  if (!el) return null;
+  el.classList.toggle(openClass, isOpen);
+  return el;
+}
+
+function isOpenState(target, openClass) {
+  const el = resolveEl(target);
+  return !!el && el.classList.contains(openClass);
+}
+
+function setNotifBadgeVisible(target, isVisible, count) {
+  const badge = resolveEl(target);
+  if (!badge) return;
+  if (typeof count === 'number') badge.textContent = count;
+  badge.classList.toggle(NOTIF_BADGE_VISIBLE_CLASS, isVisible);
+}
+
 function showRegistrationForm() {
   document.getElementById('authTitle').textContent = 'Create Account';
   document.getElementById('authSubtitle').textContent = 'Set up your dashboard credentials';
-  document.getElementById('registerForm').style.display = 'block';
-  document.getElementById('loginForm').style.display = 'none';
-  document.getElementById('recoveryForm').style.display = 'none';
+  setHiddenState('registerForm', false);
+  setHiddenState('loginForm', true);
+  setHiddenState('recoveryForm', true);
+  setHiddenState('registerError', true);
   setTimeout(() => {
     const el = document.getElementById('regUsername');
     if (el) el.focus();
@@ -113,12 +150,13 @@ function showRegistrationForm() {
 function showLoginForm() {
   document.getElementById('authTitle').textContent = 'Dashboard Login';
   document.getElementById('authSubtitle').textContent = 'Enter your credentials';
-  document.getElementById('registerForm').style.display = 'none';
-  document.getElementById('loginForm').style.display = 'block';
-  document.getElementById('recoveryForm').style.display = 'none';
-  document.getElementById('usernameInputContainer').style.display = 'block';
-  document.getElementById('passwordInputContainer').style.display = 'block';
-  document.getElementById('totpInputContainer').style.display = 'none';
+  setHiddenState('registerForm', true);
+  setHiddenState('loginForm', false);
+  setHiddenState('recoveryForm', true);
+  setHiddenState('usernameInputContainer', false);
+  setHiddenState('passwordInputContainer', false);
+  setHiddenState('totpInputContainer', true);
+  setHiddenState('loginError', true);
   setTimeout(() => {
     const el = document.getElementById('username');
     if (el) el.focus();
@@ -128,9 +166,10 @@ function showLoginForm() {
 function showRecoveryForm() {
   document.getElementById('authTitle').textContent = 'Reset Password';
   document.getElementById('authSubtitle').textContent = 'Enter recovery token and new password';
-  document.getElementById('registerForm').style.display = 'none';
-  document.getElementById('loginForm').style.display = 'none';
-  document.getElementById('recoveryForm').style.display = 'block';
+  setHiddenState('registerForm', true);
+  setHiddenState('loginForm', true);
+  setHiddenState('recoveryForm', false);
+  setHiddenState('recoveryError', true);
   setTimeout(() => {
     const el = document.getElementById('recoveryToken');
     if (el) el.focus();
@@ -186,23 +225,23 @@ async function handleRegister(event) {
   const registerBtn = document.getElementById('registerBtn');
   const registerError = document.getElementById('registerError');
   
-  registerError.style.display = 'none';
+  setHiddenState(registerError, true);
   
   if (password !== confirmPassword) {
     registerError.textContent = 'Passwords do not match';
-    registerError.style.display = 'block';
+    setHiddenState(registerError, false);
     return false;
   }
   
   if (password.length < 8) {
     registerError.textContent = 'Password must be at least 8 characters';
-    registerError.style.display = 'block';
+    setHiddenState(registerError, false);
     return false;
   }
   
   if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
     registerError.textContent = 'Password must contain at least 1 letter and 1 number';
-    registerError.style.display = 'block';
+    setHiddenState(registerError, false);
     return false;
   }
   
@@ -225,13 +264,13 @@ async function handleRegister(event) {
       showApp();
     } else {
       registerError.textContent = data.error || ('Registration failed (' + res.status + ')');
-      registerError.style.display = 'block';
+      setHiddenState(registerError, false);
       registerBtn.disabled = false;
       registerBtn.textContent = 'Create Account';
     }
   } catch (err) {
     registerError.textContent = 'Network error. Please try again.';
-    registerError.style.display = 'block';
+    setHiddenState(registerError, false);
     registerBtn.disabled = false;
     registerBtn.textContent = 'Create Account';
   }
@@ -251,7 +290,7 @@ async function handleLogin(event) {
   
   loginBtn.disabled = true;
   loginBtn.textContent = 'Logging in...';
-  loginError.style.display = 'none';
+  setHiddenState(loginError, true);
   
   try {
     const body = { username, password };
@@ -274,9 +313,9 @@ async function handleLogin(event) {
 
     if (data.requiresMfa) {
       document.getElementById('authSubtitle').textContent = 'Enter your 6-digit TOTP code';
-      document.getElementById('usernameInputContainer').style.display = 'none';
-      document.getElementById('passwordInputContainer').style.display = 'none';
-      document.getElementById('totpInputContainer').style.display = 'block';
+      setHiddenState('usernameInputContainer', true);
+      setHiddenState('passwordInputContainer', true);
+      setHiddenState('totpInputContainer', false);
       totpInput.focus();
       loginBtn.disabled = false;
       loginBtn.textContent = 'Verify';
@@ -292,7 +331,7 @@ async function handleLogin(event) {
       } else {
         loginError.textContent = data.error || 'Invalid credentials';
       }
-      loginError.style.display = 'block';
+      setHiddenState(loginError, false);
       loginBtn.disabled = false;
       loginBtn.textContent = totpCode ? 'Verify' : 'Login';
       
@@ -303,7 +342,7 @@ async function handleLogin(event) {
     }
   } catch (err) {
     loginError.textContent = 'Network error. Please try again.';
-    loginError.style.display = 'block';
+    setHiddenState(loginError, false);
     loginBtn.disabled = false;
     loginBtn.textContent = totpCode ? 'Verify' : 'Login';
   }
@@ -319,17 +358,17 @@ async function handleRecovery(event) {
   const recoveryBtn = document.getElementById('recoveryBtn');
   const recoveryError = document.getElementById('recoveryError');
   
-  recoveryError.style.display = 'none';
+  setHiddenState(recoveryError, true);
   
   if (newPassword !== confirmPassword) {
     recoveryError.textContent = 'Passwords do not match';
-    recoveryError.style.display = 'block';
+    setHiddenState(recoveryError, false);
     return false;
   }
   
   if (newPassword.length < 8) {
     recoveryError.textContent = 'Password must be at least 8 characters';
-    recoveryError.style.display = 'block';
+    setHiddenState(recoveryError, false);
     return false;
   }
   
@@ -351,13 +390,13 @@ async function handleRecovery(event) {
       showLoginForm();
     } else {
       recoveryError.textContent = data.error || ('Password reset failed (' + res.status + ')');
-      recoveryError.style.display = 'block';
+      setHiddenState(recoveryError, false);
       recoveryBtn.disabled = false;
       recoveryBtn.textContent = 'Reset Password';
     }
   } catch (err) {
     recoveryError.textContent = 'Network error. Please try again.';
-    recoveryError.style.display = 'block';
+    setHiddenState(recoveryError, false);
     recoveryBtn.disabled = false;
     recoveryBtn.textContent = 'Reset Password';
   }
@@ -373,17 +412,17 @@ async function handleChangePassword(event) {
   const changePasswordBtn = document.getElementById('changePasswordBtn');
   const changePasswordError = document.getElementById('changePasswordError');
   
-  changePasswordError.style.display = 'none';
+  setHiddenState(changePasswordError, true);
   
   if (newPassword !== confirmPassword) {
     changePasswordError.textContent = 'New passwords do not match';
-    changePasswordError.style.display = 'block';
+    setHiddenState(changePasswordError, false);
     return false;
   }
   
   if (newPassword.length < 8) {
     changePasswordError.textContent = 'New password must be at least 8 characters';
-    changePasswordError.style.display = 'block';
+    setHiddenState(changePasswordError, false);
     return false;
   }
   
@@ -406,11 +445,11 @@ async function handleChangePassword(event) {
       document.getElementById('newPasswordConfirm').value = '';
     } else {
       changePasswordError.textContent = data.error || 'Password change failed';
-      changePasswordError.style.display = 'block';
+      setHiddenState(changePasswordError, false);
     }
   } catch (err) {
     changePasswordError.textContent = err.message || 'Network error. Please try again.';
-    changePasswordError.style.display = 'block';
+    setHiddenState(changePasswordError, false);
   } finally {
     changePasswordBtn.disabled = false;
     changePasswordBtn.textContent = 'Change Password';
@@ -491,8 +530,8 @@ function hideSkeletons() {
 }
 
 function showApp() {
-  document.getElementById('loginPage').style.display = 'none';
-  document.getElementById('mainApp').style.display = 'flex';
+  setHiddenState('loginPage', true, APP_HIDDEN_CLASS);
+  setHiddenState('mainApp', false, APP_HIDDEN_CLASS);
   showSkeletons();
   fetchData();
   fetchNewData();
@@ -513,8 +552,8 @@ function showApp() {
 }
 
 function showLogin() {
-  document.getElementById('loginPage').style.display = 'flex';
-  document.getElementById('mainApp').style.display = 'none';
+  setHiddenState('loginPage', false, APP_HIDDEN_CLASS);
+  setHiddenState('mainApp', true, APP_HIDDEN_CLASS);
 }
 
 async function checkAuth() {
@@ -935,23 +974,20 @@ async function checkMFAStatus() {
     const enabled = data.enabled;
     
     const indicator = document.getElementById('mfaStatusIndicator');
+    indicator.classList.remove('mfa-status-enabled', 'mfa-status-disabled');
     if (enabled) {
       indicator.textContent = '🔒 MFA Enabled';
-      indicator.style.background = 'rgba(16,185,129,0.15)';
-      indicator.style.color = 'var(--green)';
-      indicator.style.border = '1px solid rgba(16,185,129,0.3)';
-      document.getElementById('mfaEnabledView').style.display = 'block';
-      document.getElementById('mfaDisabledView').style.display = 'none';
+      indicator.classList.add('mfa-status-enabled');
+      setHiddenState('mfaEnabledView', false);
+      setHiddenState('mfaDisabledView', true);
     } else {
       indicator.textContent = '⚠️ MFA Disabled';
-      indicator.style.background = 'rgba(245,158,11,0.15)';
-      indicator.style.color = 'var(--yellow)';
-      indicator.style.border = '1px solid rgba(245,158,11,0.3)';
-      document.getElementById('mfaEnabledView').style.display = 'none';
-      document.getElementById('mfaDisabledView').style.display = 'block';
+      indicator.classList.add('mfa-status-disabled');
+      setHiddenState('mfaEnabledView', true);
+      setHiddenState('mfaDisabledView', false);
     }
-    indicator.style.display = 'block';
-    document.getElementById('mfaSetupView').style.display = 'none';
+    setHiddenState(indicator, false);
+    setHiddenState('mfaSetupView', true);
   } catch (err) {
     console.error('Failed to check MFA status:', err);
   }
@@ -998,8 +1034,8 @@ async function setupMFA() {
         img.alt = 'MFA QR code';
         qrCodeContainer.appendChild(img);
       }
-      document.getElementById('mfaDisabledView').style.display = 'none';
-      document.getElementById('mfaSetupView').style.display = 'block';
+      setHiddenState('mfaDisabledView', true);
+      setHiddenState('mfaSetupView', false);
     } else {
       alert('Failed to setup MFA: ' + (data.error || 'Unknown error'));
       btn.disabled = false;
@@ -1016,11 +1052,11 @@ async function confirmMFASetup() {
   const code = document.getElementById('mfaVerifyCode').value.trim();
   const errorEl = document.getElementById('mfaVerifyError');
   const btn = document.getElementById('confirmMfaBtn');
-  errorEl.style.display = 'none';
+  setHiddenState(errorEl, true);
   
   if (!code || code.length !== 6) {
     errorEl.textContent = 'Enter the 6-digit code from your authenticator app.';
-    errorEl.style.display = 'block';
+    setHiddenState(errorEl, false);
     return;
   }
   
@@ -1037,18 +1073,18 @@ async function confirmMFASetup() {
     
     if (res.ok && data.success) {
       showToast('MFA enabled successfully!', 'success');
-      document.getElementById('mfaSetupView').style.display = 'none';
+      setHiddenState('mfaSetupView', true);
       document.getElementById('mfaVerifyCode').value = '';
       checkMFAStatus();
     } else {
       errorEl.textContent = data.error || 'Invalid code. Try again.';
-      errorEl.style.display = 'block';
+      setHiddenState(errorEl, false);
       document.getElementById('mfaVerifyCode').value = '';
       document.getElementById('mfaVerifyCode').focus();
     }
   } catch (err) {
     errorEl.textContent = 'Verification failed. Try again.';
-    errorEl.style.display = 'block';
+    setHiddenState(errorEl, false);
   }
   
   btn.disabled = false;
@@ -1056,7 +1092,7 @@ async function confirmMFASetup() {
 }
 
 function cancelMFASetup() {
-  document.getElementById('mfaSetupView').style.display = 'none';
+  setHiddenState('mfaSetupView', true);
   document.getElementById('mfaVerifyCode').value = '';
   checkMFAStatus();
 }
@@ -3298,11 +3334,11 @@ window.loadKeyFile = async function(name) {
 
   titleEl.textContent = name;
   setViewerMessage(contentEl, 'Loading...');
-  contentEl.style.display = 'block';
-  editorEl.style.display = 'none';
-  editBtn.style.display = 'inline-block';
-  saveBtn.style.display = 'none';
-  cancelBtn.style.display = 'none';
+  setHiddenState(contentEl, false);
+  setHiddenState(editorEl, true);
+  setHiddenState(editBtn, false);
+  setHiddenState(saveBtn, true);
+  setHiddenState(cancelBtn, true);
 
   renderKeyFilesList();
 
@@ -3336,11 +3372,11 @@ window.editKeyFile = function() {
   const cancelBtn = document.getElementById('keyFileCancelBtn');
 
   editorEl.value = _currentKeyFileRaw;
-  contentEl.style.display = 'none';
-  editorEl.style.display = 'block';
-  editBtn.style.display = 'none';
-  saveBtn.style.display = 'inline-block';
-  cancelBtn.style.display = 'inline-block';
+  setHiddenState(contentEl, true);
+  setHiddenState(editorEl, false);
+  setHiddenState(editBtn, true);
+  setHiddenState(saveBtn, false);
+  setHiddenState(cancelBtn, false);
   editorEl.focus();
 };
 
@@ -3352,11 +3388,11 @@ window.cancelEditKeyFile = function() {
   const saveBtn = document.getElementById('keyFileSaveBtn');
   const cancelBtn = document.getElementById('keyFileCancelBtn');
 
-  contentEl.style.display = 'block';
-  editorEl.style.display = 'none';
-  editBtn.style.display = 'inline-block';
-  saveBtn.style.display = 'none';
-  cancelBtn.style.display = 'none';
+  setHiddenState(contentEl, false);
+  setHiddenState(editorEl, true);
+  setHiddenState(editBtn, false);
+  setHiddenState(saveBtn, true);
+  setHiddenState(cancelBtn, true);
 };
 
 window.saveKeyFile = async function() {
@@ -3578,7 +3614,7 @@ function showComparison() {
   done.style.cssText = 'padding:20px;text-align:center;color:var(--text-muted);';
   done.textContent = 'Comparison complete';
   modalMessages.appendChild(done);
-  modal.style.display = 'flex';
+  setOpenState(modal, true, SESSION_MODAL_OPEN_CLASS);
 }
 
 function renderDiskSparkline(history) {
@@ -3639,7 +3675,7 @@ function openSessionDetail(key) {
   loading.style.cssText = 'color:var(--text-muted);font-size:13px;';
   loading.textContent = 'Loading...';
   modalMessages.appendChild(loading);
-  document.getElementById('sessionModal').style.display = 'flex';
+  setOpenState('sessionModal', true, SESSION_MODAL_OPEN_CLASS);
   authFetch(API_BASE + '/api/session-messages?id=' + encodeURIComponent(s.sessionId || s.key))
     .then(r => r.json())
     .then(msgs => {
@@ -3682,7 +3718,7 @@ function openSessionDetail(key) {
       modalMessages.appendChild(failed);
     });
 }
-function closeSessionModal() { document.getElementById('sessionModal').style.display = 'none'; }
+function closeSessionModal() { setOpenState('sessionModal', false, SESSION_MODAL_OPEN_CLASS); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSessionModal(); });
 
 // Toast notifications
@@ -4293,26 +4329,37 @@ async function loadConfig() {
   const ta = document.getElementById('configTextarea');
   const errEl = document.getElementById('configError');
   const sucEl = document.getElementById('configSuccess');
-  errEl.style.display = 'none';
-  sucEl.style.display = 'none';
+  setHiddenState(errEl, true);
+  setHiddenState(sucEl, true);
   ta.value = 'Loading...';
   try {
     const res = await authFetch(API_BASE + '/api/openclaw-config');
     const data = await res.json();
-    if (data.error) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+    if (data.error) {
+      errEl.textContent = data.error;
+      setHiddenState(errEl, false);
+      return;
+    }
     ta.value = JSON.stringify(JSON.parse(data.config), null, 2);
-  } catch(e) { errEl.textContent = 'Failed to load: ' + e.message; errEl.style.display = 'block'; }
+  } catch(e) {
+    errEl.textContent = 'Failed to load: ' + e.message;
+    setHiddenState(errEl, false);
+  }
 }
 
 async function saveConfig() {
   const ta = document.getElementById('configTextarea');
   const errEl = document.getElementById('configError');
   const sucEl = document.getElementById('configSuccess');
-  errEl.style.display = 'none';
-  sucEl.style.display = 'none';
+  setHiddenState(errEl, true);
+  setHiddenState(sucEl, true);
   try {
     JSON.parse(ta.value);
-  } catch(e) { errEl.textContent = 'Invalid JSON: ' + e.message; errEl.style.display = 'block'; return; }
+  } catch(e) {
+    errEl.textContent = 'Invalid JSON: ' + e.message;
+    setHiddenState(errEl, false);
+    return;
+  }
   if (!confirm('Save config and restart OpenClaw gateway?')) return;
   try {
     const res = await authFetch(API_BASE + '/api/openclaw-config', {
@@ -4321,11 +4368,18 @@ async function saveConfig() {
       body: JSON.stringify({ config: ta.value })
     });
     const data = await res.json();
-    if (data.error) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+    if (data.error) {
+      errEl.textContent = data.error;
+      setHiddenState(errEl, false);
+      return;
+    }
     sucEl.textContent = '✅ Config saved. Backup: ' + data.backup + '. Gateway restarting...';
-    sucEl.style.display = 'block';
+    setHiddenState(sucEl, false);
     showToast('Config saved, gateway restarting...', 'success');
-  } catch(e) { errEl.textContent = 'Save failed: ' + e.message; errEl.style.display = 'block'; }
+  } catch(e) {
+    errEl.textContent = 'Save failed: ' + e.message;
+    setHiddenState(errEl, false);
+  }
 }
 
 function cancelReauth() {
@@ -4453,14 +4507,10 @@ function setNotifPanelExpanded(isExpanded) {
 function toggleNotifPanel() {
   const panel = document.getElementById('notifPanel');
   if (!panel) return;
-  if (panel.style.display === 'flex') {
-    panel.style.display = 'none';
-    setNotifPanelExpanded(false);
-    return;
-  }
-  panel.style.display = 'flex';
-  setNotifPanelExpanded(true);
-  fetchNotifications();
+  const isOpen = isOpenState(panel, NOTIF_PANEL_OPEN_CLASS);
+  setOpenState(panel, !isOpen, NOTIF_PANEL_OPEN_CLASS);
+  setNotifPanelExpanded(!isOpen);
+  if (!isOpen) fetchNotifications();
 }
 
 async function fetchNotifications() {
@@ -4504,9 +4554,8 @@ async function fetchNotifications() {
     if (data.events.length) {
       notifLastSeen = data.events[0].timestamp;
       localStorage.setItem('notifLastSeen', notifLastSeen);
-      document.getElementById('notifBadge').style.display = 'none';
-      const badgeMobile = document.getElementById('notifBadgeMobile');
-      if (badgeMobile) badgeMobile.style.display = 'none';
+      setNotifBadgeVisible('notifBadge', false);
+      setNotifBadgeVisible('notifBadgeMobile', false);
     }
   } catch(e) { showToast('Notification fetch error: ' + e.message, 'warning'); }
 }
@@ -4520,9 +4569,8 @@ async function checkNewNotifications() {
       const badge = document.getElementById('notifBadge');
       const badgeMobile = document.getElementById('notifBadgeMobile');
       if (newCount > 0) {
-        badge.textContent = newCount;
-        badge.style.display = 'flex';
-        if (badgeMobile) { badgeMobile.textContent = newCount; badgeMobile.style.display = 'flex'; }
+        setNotifBadgeVisible(badge, true, newCount);
+        setNotifBadgeVisible(badgeMobile, true, newCount);
       }
     }
   } catch {}
@@ -4533,8 +4581,8 @@ document.addEventListener('click', (e) => {
   const panel = document.getElementById('notifPanel');
   const bell = document.getElementById('notificationBell');
   const bellMobile = document.getElementById('notificationBellMobile');
-  if (panel.style.display === 'flex' && !panel.contains(e.target) && !bell.contains(e.target) && (!bellMobile || !bellMobile.contains(e.target))) {
-    panel.style.display = 'none';
+  if (isOpenState(panel, NOTIF_PANEL_OPEN_CLASS) && !panel.contains(e.target) && !bell.contains(e.target) && (!bellMobile || !bellMobile.contains(e.target))) {
+    setOpenState(panel, false, NOTIF_PANEL_OPEN_CLASS);
     setNotifPanelExpanded(false);
   }
 });
