@@ -76,9 +76,12 @@ test('index.html loads frontend scripts in dependency order', () => {
     'core-helpers.js?v=2',
     'render-helpers.js?v=1',
     'auth-ui.js?v=1',
-    'app.js?v=37',
+    'app.js?v=38',
+    'dashboard-ui.js?v=1',
+    'sessions-ui.js?v=1',
     'misc-ui.js?v=2',
     'system-ui.js?v=2',
+    'memory-ui.js?v=1',
     'bootstrap.js?v=1',
   ];
   let last = -1;
@@ -143,10 +146,10 @@ test('frontend module files are registered for static serving and hot reload', (
   const serverJs = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   const devmodeJs = fs.readFileSync(path.join(__dirname, '..', 'lib', 'devmode.js'), 'utf8');
   const middlewareJs = fs.readFileSync(path.join(__dirname, '..', 'lib', 'middleware.js'), 'utf8');
-  for (const token of ['/core-helpers.js', '/render-helpers.js', '/auth-ui.js', '/misc-ui.js', '/system-ui.js', '/bootstrap.js']) {
+  for (const token of ['/core-helpers.js', '/render-helpers.js', '/auth-ui.js', '/dashboard-ui.js', '/sessions-ui.js', '/misc-ui.js', '/system-ui.js', '/memory-ui.js', '/bootstrap.js']) {
     assert.ok(serverJs.includes(token), `server missing ${token}`);
   }
-  for (const token of ['core-helpers.js', 'render-helpers.js', 'auth-ui.js', 'misc-ui.js', 'system-ui.js', 'bootstrap.js']) {
+  for (const token of ['core-helpers.js', 'render-helpers.js', 'auth-ui.js', 'dashboard-ui.js', 'sessions-ui.js', 'misc-ui.js', 'system-ui.js', 'memory-ui.js', 'bootstrap.js']) {
     assert.ok(devmodeJs.includes(token), `devmode missing ${token}`);
     assert.ok(middlewareJs.includes(token), `middleware missing ${token}`);
   }

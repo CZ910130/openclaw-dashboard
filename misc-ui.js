@@ -792,7 +792,7 @@ function toggleLogAutoRefresh(enabled) {
 // Update document title with usage percentage
 function updatePageTitle() {
   try {
-    const cu = _cachedClaudeUsage;
+    const cu = cachedClaudeUsageData;
     if (cu && cu.session) {
       document.title = cu.session.percent + '% | Agent Dashboard';
     }

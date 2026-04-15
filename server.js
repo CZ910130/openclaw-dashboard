@@ -255,8 +255,11 @@ const staticFiles = {
   '/render-helpers.js': { file: path.join(__dirname, 'render-helpers.js'), type: 'application/javascript' },
   '/auth-ui.js': { file: path.join(__dirname, 'auth-ui.js'), type: 'application/javascript' },
   '/app.js': { file: path.join(__dirname, 'app.js'), type: 'application/javascript' },
+  '/dashboard-ui.js': { file: path.join(__dirname, 'dashboard-ui.js'), type: 'application/javascript' },
+  '/sessions-ui.js': { file: path.join(__dirname, 'sessions-ui.js'), type: 'application/javascript' },
   '/misc-ui.js': { file: path.join(__dirname, 'misc-ui.js'), type: 'application/javascript' },
   '/system-ui.js': { file: path.join(__dirname, 'system-ui.js'), type: 'application/javascript' },
+  '/memory-ui.js': { file: path.join(__dirname, 'memory-ui.js'), type: 'application/javascript' },
   '/bootstrap.js': { file: path.join(__dirname, 'bootstrap.js'), type: 'application/javascript' }
 };
 
