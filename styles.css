@@ -807,6 +807,149 @@ body {
   font-size: 11px;
 }
 
+.usage-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.usage-card-title {
+  margin: 0;
+}
+
+.usage-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.usage-card-scraped-at {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.usage-card-refresh-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.usage-card-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.usage-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.usage-bar-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.usage-bar-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.usage-progress-track {
+  height: 24px;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.usage-progress-fill {
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.6s;
+  width: 0%;
+  background: linear-gradient(90deg, #10b981, #10b981);
+}
+
+.usage-progress-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.usage-bar-reset {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.token-usage-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  margin-top: 8px;
+}
+
+.token-usage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.token-usage-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.token-usage-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.token-usage-track {
+  height: 28px;
+  background: var(--bg-primary);
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+}
+
+.token-usage-fill {
+  height: 100%;
+  border-radius: 14px;
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  width: 0%;
+  background: linear-gradient(90deg, #10b981, #10b981);
+}
+
+.token-usage-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
 .mono {
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;

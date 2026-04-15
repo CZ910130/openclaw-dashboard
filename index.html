@@ -473,46 +473,46 @@
       </div>
 
       <div class="card mb-24">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <h3 class="card-title" style="margin:0;">Claude Code Usage (Anthropic)</h3>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <span style="font-size:11px;color:var(--text-muted);" id="claudeUsageScrapedAt">Not scraped yet</span>
-            <button onclick="scrapeClaudeUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="scrapeBtn">⟳ Refresh</button>
+        <div class="usage-card-header">
+          <h3 class="card-title usage-card-title">Claude Code Usage (Anthropic)</h3>
+          <div class="usage-card-actions">
+            <span class="usage-card-scraped-at" id="claudeUsageScrapedAt">Not scraped yet</span>
+            <button onclick="scrapeClaudeUsage()" class="usage-card-refresh-btn" id="scrapeBtn">⟳ Refresh</button>
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:20px;" id="claudeUsageBars">
+        <div class="usage-card-bars" id="claudeUsageBars">
           <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-              <span style="font-weight:600;font-size:14px;">Session</span>
-              <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="cuSessionLabel">--</span>
+            <div class="usage-bar-header">
+              <span class="usage-bar-title">Session</span>
+              <span class="mono usage-bar-label" id="cuSessionLabel">--</span>
             </div>
-            <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
-              <div id="cuSessionBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="cuSessionPct">--</div>
+            <div class="usage-progress-track">
+              <div id="cuSessionBar" class="usage-progress-fill"></div>
+              <div class="usage-progress-pct" id="cuSessionPct">--</div>
             </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="cuSessionReset"></div>
+            <div class="usage-bar-reset" id="cuSessionReset"></div>
           </div>
           <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-              <span style="font-weight:600;font-size:14px;">Weekly (All Models)</span>
-              <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="cuWeeklyLabel">--</span>
+            <div class="usage-bar-header">
+              <span class="usage-bar-title">Weekly (All Models)</span>
+              <span class="mono usage-bar-label" id="cuWeeklyLabel">--</span>
             </div>
-            <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
-              <div id="cuWeeklyBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="cuWeeklyPct">--</div>
+            <div class="usage-progress-track">
+              <div id="cuWeeklyBar" class="usage-progress-fill"></div>
+              <div class="usage-progress-pct" id="cuWeeklyPct">--</div>
             </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="cuWeeklyReset"></div>
+            <div class="usage-bar-reset" id="cuWeeklyReset"></div>
           </div>
           <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-              <span style="font-weight:600;font-size:14px;">Weekly (Sonnet)</span>
-              <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="cuSonnetLabel">--</span>
+            <div class="usage-bar-header">
+              <span class="usage-bar-title">Weekly (Sonnet)</span>
+              <span class="mono usage-bar-label" id="cuSonnetLabel">--</span>
             </div>
-            <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
-              <div id="cuSonnetBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="cuSonnetPct">--</div>
+            <div class="usage-progress-track">
+              <div id="cuSonnetBar" class="usage-progress-fill"></div>
+              <div class="usage-progress-pct" id="cuSonnetPct">--</div>
             </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="cuSonnetReset"></div>
+            <div class="usage-bar-reset" id="cuSonnetReset"></div>
           </div>
         </div>
       </div>
@@ -546,25 +546,25 @@
 
       <div class="card mb-24">
         <h3 class="card-title">Output Token Usage</h3>
-        <div style="display:flex;flex-direction:column;gap:28px;margin-top:8px;">
+        <div class="token-usage-stack">
           <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-              <span style="font-weight:600;font-size:15px;">Opus</span>
-              <span class="mono" style="font-size:13px;color:var(--text-secondary);" id="opusTokenLabel">0 / 88k</span>
+            <div class="token-usage-header">
+              <span class="token-usage-title">Opus</span>
+              <span class="mono token-usage-label" id="opusTokenLabel">0 / 88k</span>
             </div>
-            <div style="height:28px;background:var(--bg-primary);border-radius:14px;overflow:hidden;position:relative;">
-              <div id="opusProgressBar" style="height:100%;border-radius:14px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="opusProgressPct">0%</div>
+            <div class="token-usage-track">
+              <div id="opusProgressBar" class="token-usage-fill"></div>
+              <div class="token-usage-pct" id="opusProgressPct">0%</div>
             </div>
           </div>
           <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-              <span style="font-weight:600;font-size:15px;">Sonnet</span>
-              <span class="mono" style="font-size:13px;color:var(--text-secondary);" id="sonnetTokenLabel">0 / 220k</span>
+            <div class="token-usage-header">
+              <span class="token-usage-title">Sonnet</span>
+              <span class="mono token-usage-label" id="sonnetTokenLabel">0 / 220k</span>
             </div>
-            <div style="height:28px;background:var(--bg-primary);border-radius:14px;overflow:hidden;position:relative;">
-              <div id="sonnetProgressBar" style="height:100%;border-radius:14px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="sonnetProgressPct">0%</div>
+            <div class="token-usage-track">
+              <div id="sonnetProgressBar" class="token-usage-fill"></div>
+              <div class="token-usage-pct" id="sonnetProgressPct">0%</div>
             </div>
           </div>
         </div>
@@ -600,47 +600,47 @@
       </div>
 
       <div class="card mb-24">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <h3 class="card-title" style="margin:0;">ChatGPT Usage (Local Sessions)</h3>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <span style="font-size:11px;color:var(--text-muted);" id="openaiUsageScrapedAt">Not scraped yet</span>
-            <button onclick="scrapeOpenAIUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="openaiScrapeBtn">⟳ Refresh</button>
+        <div class="usage-card-header">
+          <h3 class="card-title usage-card-title">ChatGPT Usage (Local Sessions)</h3>
+          <div class="usage-card-actions">
+            <span class="usage-card-scraped-at" id="openaiUsageScrapedAt">Not scraped yet</span>
+            <button onclick="scrapeOpenAIUsage()" class="usage-card-refresh-btn" id="openaiScrapeBtn">⟳ Refresh</button>
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:20px;" id="openaiUsageBars">
+        <div class="usage-card-bars" id="openaiUsageBars">
           <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-              <span style="font-weight:600;font-size:14px;">Last 24h</span>
-              <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="openaiSessionLabel">--</span>
+            <div class="usage-bar-header">
+              <span class="usage-bar-title">Last 24h</span>
+              <span class="mono usage-bar-label" id="openaiSessionLabel">--</span>
             </div>
-            <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
-              <div id="openaiSessionBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="openaiSessionPct">--</div>
+            <div class="usage-progress-track">
+              <div id="openaiSessionBar" class="usage-progress-fill"></div>
+              <div class="usage-progress-pct" id="openaiSessionPct">--</div>
             </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="openaiSessionReset"></div>
+            <div class="usage-bar-reset" id="openaiSessionReset"></div>
           </div>
         </div>
       </div>
 
       <div class="card mb-24">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <h3 class="card-title" style="margin:0;">OpenCode-Go Usage (Local Sessions)</h3>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <span style="font-size:11px;color:var(--text-muted);" id="opencodeGoUsageScrapedAt">Not scraped yet</span>
-            <button onclick="scrapeOpenCodeGoUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="opencodeGoScrapeBtn">⟳ Refresh</button>
+        <div class="usage-card-header">
+          <h3 class="card-title usage-card-title">OpenCode-Go Usage (Local Sessions)</h3>
+          <div class="usage-card-actions">
+            <span class="usage-card-scraped-at" id="opencodeGoUsageScrapedAt">Not scraped yet</span>
+            <button onclick="scrapeOpenCodeGoUsage()" class="usage-card-refresh-btn" id="opencodeGoScrapeBtn">⟳ Refresh</button>
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:20px;" id="opencodeGoUsageBars">
+        <div class="usage-card-bars" id="opencodeGoUsageBars">
           <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-              <span style="font-weight:600;font-size:14px;">Last 24h</span>
-              <span class="mono" style="font-size:12px;color:var(--text-secondary);" id="opencodeGoSessionLabel">--</span>
+            <div class="usage-bar-header">
+              <span class="usage-bar-title">Last 24h</span>
+              <span class="mono usage-bar-label" id="opencodeGoSessionLabel">--</span>
             </div>
-            <div style="height:24px;background:var(--bg-primary);border-radius:12px;overflow:hidden;position:relative;">
-              <div id="opencodeGoSessionBar" style="height:100%;border-radius:12px;transition:width 0.6s;width:0%;background:linear-gradient(90deg,#10b981,#10b981);"></div>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);" id="opencodeGoSessionPct">--</div>
+            <div class="usage-progress-track">
+              <div id="opencodeGoSessionBar" class="usage-progress-fill"></div>
+              <div class="usage-progress-pct" id="opencodeGoSessionPct">--</div>
             </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="opencodeGoSessionReset"></div>
+            <div class="usage-bar-reset" id="opencodeGoSessionReset"></div>
           </div>
         </div>
       </div>
