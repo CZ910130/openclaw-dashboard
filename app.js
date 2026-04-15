@@ -3635,11 +3635,11 @@ async function fetchSysSecurity() {
   try {
     const res = await authFetch(API_BASE + '/api/sys-security');
     const data = await res.json();
-    document.getElementById('secUfw').innerHTML = data.ufw || 'N/A';
-    document.getElementById('secPorts').innerHTML = data.ports || 'N/A';
-    document.getElementById('secF2b').innerHTML = data.fail2ban || 'N/A';
-    document.getElementById('secSsh').innerHTML = data.ssh || 'N/A';
-    document.getElementById('secAudit').innerHTML = data.audit || 'N/A';
+    document.getElementById('secUfw').textContent = data.ufw || 'N/A';
+    document.getElementById('secPorts').textContent = data.ports || 'N/A';
+    document.getElementById('secF2b').textContent = data.fail2ban || 'N/A';
+    document.getElementById('secSsh').textContent = data.ssh || 'N/A';
+    document.getElementById('secAudit').textContent = data.audit || 'N/A';
   } catch(e) { showToast('Security fetch error: ' + e.message, 'warning'); }
 }
 
@@ -3757,34 +3757,48 @@ async function loadDocker() {
     const data = await res.json();
     const ce = document.getElementById('dockerContainers');
     if (data.containers && data.containers.length) {
-      ce.innerHTML = '<table style="width:100%;font-size:12px;border-collapse:collapse;">' +
-        '<tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:6px;">Name</th><th style="text-align:left;padding:6px;">Image</th><th style="text-align:left;padding:6px;">Status</th><th style="text-align:left;padding:6px;">Ports</th><th style="padding:6px;">Actions</th></tr>' +
-        data.containers.map(c => {
-          const running = c.State === 'running';
-          const dot = running ? '🟢' : '🔴';
-          return '<tr style="border-bottom:1px solid var(--border);">' +
-            '<td style="padding:6px;">' + dot + ' ' + (c.Names || '') + '</td>' +
-            '<td style="padding:6px;color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;">' + (c.Image || '') + '</td>' +
-            '<td style="padding:6px;color:var(--text-secondary);">' + (c.Status || '') + '</td>' +
-            '<td style="padding:6px;color:var(--text-muted);font-size:11px;">' + (c.Ports || '-') + '</td>' +
-            '<td style="padding:6px;text-align:center;">' +
-            (running
-              ? '<button onclick="dockerAction(\'stop\',\'' + (c.Names||'') + '\')" style="padding:3px 8px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;color:var(--red);cursor:pointer;font-size:11px;margin-right:4px;">Stop</button>' +
-                '<button onclick="dockerAction(\'restart\',\'' + (c.Names||'') + '\')" style="padding:3px 8px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;color:var(--yellow);cursor:pointer;font-size:11px;">Restart</button>'
-              : '<button onclick="dockerAction(\'start\',\'' + (c.Names||'') + '\')" style="padding:3px 8px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;color:var(--green);cursor:pointer;font-size:11px;">Start</button>') +
-            '</td></tr>';
-        }).join('') + '</table>';
+      const table = document.createElement('table');
+      table.style.cssText = 'width:100%;font-size:12px;border-collapse:collapse;';
+      table.innerHTML = '<tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:6px;">Name</th><th style="text-align:left;padding:6px;">Image</th><th style="text-align:left;padding:6px;">Status</th><th style="text-align:left;padding:6px;">Ports</th><th style="padding:6px;">Actions</th></tr>';
+      data.containers.forEach(c => {
+        const running = c.State === 'running';
+        const dot = running ? '🟢' : '🔴';
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border)';
+        tr.innerHTML = `<td style="padding:6px;">${dot} ${escapeHtml(c.Names || '')}</td><td style="padding:6px;color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.Image || '')}</td><td style="padding:6px;color:var(--text-secondary);">${escapeHtml(c.Status || '')}</td><td style="padding:6px;color:var(--text-muted);font-size:11px;">${escapeHtml(c.Ports || '-')}</td><td style="padding:6px;text-align:center;"></td>`;
+        const actionsTd = tr.lastElementChild;
+        const actionDefs = running ? [
+          { label: 'Stop', action: 'stop', color: 'var(--red)' },
+          { label: 'Restart', action: 'restart', color: 'var(--yellow)' }
+        ] : [
+          { label: 'Start', action: 'start', color: 'var(--green)' }
+        ];
+        actionDefs.forEach((def, idx) => {
+          const btn = document.createElement('button');
+          btn.textContent = def.label;
+          btn.style.cssText = `padding:3px 8px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;color:${def.color};cursor:pointer;font-size:11px;${idx < actionDefs.length - 1 ? 'margin-right:4px;' : ''}`;
+          btn.onclick = () => dockerAction(def.action, c.Names || '');
+          actionsTd.appendChild(btn);
+        });
+        table.appendChild(tr);
+      });
+      ce.innerHTML = '';
+      ce.appendChild(table);
     } else { ce.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No containers found</div>'; }
 
     const ie = document.getElementById('dockerImages');
     if (data.images && data.images.length) {
-      ie.innerHTML = '<table style="width:100%;font-size:12px;border-collapse:collapse;">' +
-        '<tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:6px;">Repository</th><th style="text-align:left;padding:6px;">Tag</th><th style="text-align:left;padding:6px;">Size</th></tr>' +
-        data.images.map(i => '<tr style="border-bottom:1px solid var(--border);">' +
-          '<td style="padding:6px;">' + (i.Repository || '') + '</td>' +
-          '<td style="padding:6px;color:var(--text-secondary);">' + (i.Tag || '') + '</td>' +
-          '<td style="padding:6px;color:var(--text-muted);">' + (i.Size || '') + '</td></tr>'
-        ).join('') + '</table>';
+      const table = document.createElement('table');
+      table.style.cssText = 'width:100%;font-size:12px;border-collapse:collapse;';
+      table.innerHTML = '<tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:6px;">Repository</th><th style="text-align:left;padding:6px;">Tag</th><th style="text-align:left;padding:6px;">Size</th></tr>';
+      data.images.forEach(i => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border)';
+        tr.innerHTML = `<td style="padding:6px;">${escapeHtml(i.Repository || '')}</td><td style="padding:6px;color:var(--text-secondary);">${escapeHtml(i.Tag || '')}</td><td style="padding:6px;color:var(--text-muted);">${escapeHtml(i.Size || '')}</td>`;
+        table.appendChild(tr);
+      });
+      ie.innerHTML = '';
+      ie.appendChild(table);
     } else { ie.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No images found</div>'; }
 
     document.getElementById('dockerSystem').textContent = data.system || 'N/A';
