@@ -1197,6 +1197,29 @@ body {
   #memoryFiles .mem-file-item .mono {
     word-break: break-all;
   }
+  #overviewUsageCard .metric > div:first-child {
+    align-items: flex-start !important;
+    gap: 6px !important;
+  }
+  #overviewUsageCard .metric-value {
+    font-size: 28px;
+  }
+  #providerSwitch {
+    width: 100%;
+    flex: 0 0 100%;
+    order: 99;
+    min-width: 0;
+  }
+  #providerSwitch button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 4px !important;
+    font-size: 10px !important;
+    white-space: nowrap;
+  }
+  #overviewUsageCard #modelSelect {
+    max-width: 100%;
+  }
 }
 
 .qa-btn {
