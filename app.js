@@ -2738,9 +2738,21 @@ function renderHealthSparklines() {
       const y = h - ((v - min) / range) * h;
       return `${x},${y}`;
     }).join(' ');
-    el.innerHTML = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-      <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`;
+    el.innerHTML = '';
+    const svgNs = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNs, 'svg');
+    svg.setAttribute('width', String(w));
+    svg.setAttribute('height', String(h));
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    const polyline = document.createElementNS(svgNs, 'polyline');
+    polyline.setAttribute('points', points);
+    polyline.setAttribute('fill', 'none');
+    polyline.setAttribute('stroke', color);
+    polyline.setAttribute('stroke-width', '1.5');
+    polyline.setAttribute('stroke-linecap', 'round');
+    polyline.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(polyline);
+    el.appendChild(svg);
   };
   
   renderSparkline('cpuSparkline', 'cpu', 'var(--green)');
@@ -3335,27 +3347,57 @@ function showComparison() {
     { s: s2, color: 'var(--purple)', costColor: 'var(--cyan)' }
   ].forEach(({ s, color, costColor }) => {
     const col = document.createElement('div');
-    col.innerHTML = `
-      <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:${color};">${escapeHtml(s.label)}</h3>
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div><span style="color:var(--text-muted);font-size:12px;">Model:</span> <span class="mono">${escapeHtml(s.model.split('/').pop())}</span></div>
-        <div><span style="color:var(--text-muted);font-size:12px;">Tokens:</span> <span class="mono">${(s.totalTokens||0).toLocaleString()}</span></div>
-        <div><span style="color:var(--text-muted);font-size:12px;">Cost:</span> <span class="mono">$${(s.cost||0).toFixed(2)}</span></div>
-        <div style="margin-top:12px;">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Tokens</div>
-          <div style="height:24px;background:var(--bg-primary);border-radius:6px;overflow:hidden;">
-            <div style="height:100%;width:${Math.round(((s.totalTokens||0)/maxTokens)*100)}%;background:${color};border-radius:6px;"></div>
-          </div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:8px;margin-bottom:4px;">Cost</div>
-          <div style="height:24px;background:var(--bg-primary);border-radius:6px;overflow:hidden;">
-            <div style="height:100%;width:${Math.round(((s.cost||0)/maxCost)*100)}%;background:${costColor};border-radius:6px;"></div>
-          </div>
-        </div>
-      </div>`;
+    const title = document.createElement('h3');
+    title.style.cssText = `font-size:16px;font-weight:700;margin-bottom:16px;color:${color};`;
+    title.textContent = s.label;
+    col.appendChild(title);
+
+    const info = document.createElement('div');
+    info.style.cssText = 'display:flex;flex-direction:column;gap:12px;';
+    [
+      ['Model', s.model.split('/').pop()],
+      ['Tokens', (s.totalTokens||0).toLocaleString()],
+      ['Cost', '$' + (s.cost||0).toFixed(2)]
+    ].forEach(([label, value]) => {
+      const row = document.createElement('div');
+      const labelEl = document.createElement('span');
+      labelEl.style.cssText = 'color:var(--text-muted);font-size:12px;';
+      labelEl.textContent = label + ': ';
+      const valueEl = document.createElement('span');
+      valueEl.className = 'mono';
+      valueEl.textContent = value;
+      row.appendChild(labelEl);
+      row.appendChild(valueEl);
+      info.appendChild(row);
+    });
+
+    const bars = document.createElement('div');
+    bars.style.marginTop = '12px';
+    [
+      ['Tokens', Math.round(((s.totalTokens||0)/maxTokens)*100), color],
+      ['Cost', Math.round(((s.cost||0)/maxCost)*100), costColor]
+    ].forEach(([label, pct, fill], idx) => {
+      const labelEl = document.createElement('div');
+      labelEl.style.cssText = `font-size:11px;color:var(--text-muted);margin-bottom:4px;${idx ? 'margin-top:8px;' : ''}`;
+      labelEl.textContent = label;
+      const outer = document.createElement('div');
+      outer.style.cssText = 'height:24px;background:var(--bg-primary);border-radius:6px;overflow:hidden;';
+      const inner = document.createElement('div');
+      inner.style.cssText = `height:100%;width:${pct}%;background:${fill};border-radius:6px;`;
+      outer.appendChild(inner);
+      bars.appendChild(labelEl);
+      bars.appendChild(outer);
+    });
+    info.appendChild(bars);
+    col.appendChild(info);
     wrapper.appendChild(col);
   });
   modalStats.appendChild(wrapper);
-  modalMessages.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);">Comparison complete</div>';
+  modalMessages.innerHTML = '';
+  const done = document.createElement('div');
+  done.style.cssText = 'padding:20px;text-align:center;color:var(--text-muted);';
+  done.textContent = 'Comparison complete';
+  modalMessages.appendChild(done);
   modal.style.display = 'flex';
 }
 
@@ -3860,7 +3902,16 @@ updateSessionsStats = function(filtered) {
           if (container) {
             const durDiv = document.createElement('div');
             durDiv.style.cssText = 'display:flex;align-items:center;gap:8px;';
-            durDiv.innerHTML = `<span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Avg Duration</span><span class="mono" style="font-size:20px;font-weight:700;" id="statsAvgDuration">${hours > 0 ? hours + 'h ' : ''}${mins}m</span>`;
+            const label = document.createElement('span');
+            label.style.cssText = 'font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;';
+            label.textContent = 'Avg Duration';
+            const value = document.createElement('span');
+            value.className = 'mono';
+            value.style.cssText = 'font-size:20px;font-weight:700;';
+            value.id = 'statsAvgDuration';
+            value.textContent = `${hours > 0 ? hours + 'h ' : ''}${mins}m`;
+            durDiv.appendChild(label);
+            durDiv.appendChild(value);
             container.appendChild(durDiv);
           }
         } else {
@@ -3899,7 +3950,14 @@ toggleSessionExpand = function(key, e) {
     if (grid && !document.getElementById('dur-' + CSS.escape(key))) {
       const durDiv = document.createElement('div');
       durDiv.id = 'dur-' + CSS.escape(key);
-      durDiv.innerHTML = `<div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Duration</div><div style="font-size:12px;">${durStr}</div>`;
+      const label = document.createElement('div');
+      label.style.cssText = 'font-size:10px;color:var(--text-muted);text-transform:uppercase;';
+      label.textContent = 'Duration';
+      const value = document.createElement('div');
+      value.style.fontSize = '12px';
+      value.textContent = durStr;
+      durDiv.appendChild(label);
+      durDiv.appendChild(value);
       grid.appendChild(durDiv);
     }
   } catch {}
@@ -4100,18 +4158,33 @@ async function loadDocker() {
   try {
     const res = await authFetch(API_BASE + '/api/docker');
     const data = await res.json();
+    const makeCell = (tag, text, style, className) => {
+      const el = document.createElement(tag);
+      if (style) el.style.cssText = style;
+      if (className) el.className = className;
+      el.textContent = text;
+      return el;
+    };
     const ce = document.getElementById('dockerContainers');
     if (data.containers && data.containers.length) {
       const table = document.createElement('table');
       table.style.cssText = 'width:100%;font-size:12px;border-collapse:collapse;';
-      table.innerHTML = '<tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:6px;">Name</th><th style="text-align:left;padding:6px;">Image</th><th style="text-align:left;padding:6px;">Status</th><th style="text-align:left;padding:6px;">Ports</th><th style="padding:6px;">Actions</th></tr>';
+      const headerRow = document.createElement('tr');
+      headerRow.style.borderBottom = '1px solid var(--border)';
+      ['Name', 'Image', 'Status', 'Ports', 'Actions'].forEach((label, idx) => {
+        headerRow.appendChild(makeCell('th', label, `text-align:${idx === 4 ? 'center' : 'left'};padding:6px;`));
+      });
+      table.appendChild(headerRow);
       data.containers.forEach(c => {
         const running = c.State === 'running';
         const dot = running ? '🟢' : '🔴';
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid var(--border)';
-        tr.innerHTML = `<td style="padding:6px;">${dot} ${escapeHtml(c.Names || '')}</td><td style="padding:6px;color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.Image || '')}</td><td style="padding:6px;color:var(--text-secondary);">${escapeHtml(c.Status || '')}</td><td style="padding:6px;color:var(--text-muted);font-size:11px;">${escapeHtml(c.Ports || '-')}</td><td style="padding:6px;text-align:center;"></td>`;
-        const actionsTd = tr.lastElementChild;
+        tr.appendChild(makeCell('td', `${dot} ${c.Names || ''}`, 'padding:6px;'));
+        tr.appendChild(makeCell('td', c.Image || '', 'padding:6px;color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;'));
+        tr.appendChild(makeCell('td', c.Status || '', 'padding:6px;color:var(--text-secondary);'));
+        tr.appendChild(makeCell('td', c.Ports || '-', 'padding:6px;color:var(--text-muted);font-size:11px;'));
+        const actionsTd = makeCell('td', '', 'padding:6px;text-align:center;');
         const actionDefs = running ? [
           { label: 'Stop', action: 'stop', color: 'var(--red)' },
           { label: 'Restart', action: 'restart', color: 'var(--yellow)' }
@@ -4125,26 +4198,40 @@ async function loadDocker() {
           btn.onclick = () => dockerAction(def.action, c.Names || '');
           actionsTd.appendChild(btn);
         });
+        tr.appendChild(actionsTd);
         table.appendChild(tr);
       });
       ce.innerHTML = '';
       ce.appendChild(table);
-    } else { ce.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No containers found</div>'; }
+    } else {
+      setViewerMessage(ce, 'No containers found');
+      ce.firstElementChild.style.fontSize = '13px';
+    }
 
     const ie = document.getElementById('dockerImages');
     if (data.images && data.images.length) {
       const table = document.createElement('table');
       table.style.cssText = 'width:100%;font-size:12px;border-collapse:collapse;';
-      table.innerHTML = '<tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:6px;">Repository</th><th style="text-align:left;padding:6px;">Tag</th><th style="text-align:left;padding:6px;">Size</th></tr>';
+      const headerRow = document.createElement('tr');
+      headerRow.style.borderBottom = '1px solid var(--border)';
+      ['Repository', 'Tag', 'Size'].forEach(label => {
+        headerRow.appendChild(makeCell('th', label, 'text-align:left;padding:6px;'));
+      });
+      table.appendChild(headerRow);
       data.images.forEach(i => {
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid var(--border)';
-        tr.innerHTML = `<td style="padding:6px;">${escapeHtml(i.Repository || '')}</td><td style="padding:6px;color:var(--text-secondary);">${escapeHtml(i.Tag || '')}</td><td style="padding:6px;color:var(--text-muted);">${escapeHtml(i.Size || '')}</td>`;
+        tr.appendChild(makeCell('td', i.Repository || '', 'padding:6px;'));
+        tr.appendChild(makeCell('td', i.Tag || '', 'padding:6px;color:var(--text-secondary);'));
+        tr.appendChild(makeCell('td', i.Size || '', 'padding:6px;color:var(--text-muted);'));
         table.appendChild(tr);
       });
       ie.innerHTML = '';
       ie.appendChild(table);
-    } else { ie.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No images found</div>'; }
+    } else {
+      setViewerMessage(ie, 'No images found');
+      ie.firstElementChild.style.fontSize = '13px';
+    }
 
     document.getElementById('dockerSystem').textContent = data.system || 'N/A';
   } catch(e) { showToast('Docker fetch error: ' + e.message, 'warning'); }
