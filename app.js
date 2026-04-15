@@ -1833,8 +1833,7 @@ function updateSessions() {
       cell.className = `table-cell${opts.mono ? ' mono' : ''}`;
       if (opts.style) cell.style.cssText = opts.style;
       if (opts.onClick) cell.onclick = opts.onClick;
-      if (opts.html != null) cell.innerHTML = opts.html;
-      else if (opts.text != null) cell.textContent = opts.text;
+      if (opts.text != null) cell.textContent = opts.text;
       row.appendChild(cell);
       return cell;
     };
@@ -1858,11 +1857,15 @@ function updateSessions() {
     if (isActive) {
       const live = document.createElement('span');
       live.style.cssText = 'display:inline-flex;align-items:center;gap:3px;padding:1px 5px;background:rgba(16,185,129,0.15);color:var(--green);border-radius:4px;font-size:9px;font-weight:600;vertical-align:middle;margin-left:6px;';
-      live.innerHTML = '●&thinsp;LIVE';
+      live.textContent = '● LIVE';
       labelCell.appendChild(live);
     }
 
-    appendCell({ onClick: expandClick, html: `<span class="badge ${typeClass}">${escapeHtml(typeClass)}</span>` });
+    const typeCell = appendCell({ onClick: expandClick });
+    const badge = document.createElement('span');
+    badge.className = `badge ${typeClass}`;
+    badge.textContent = typeClass;
+    typeCell.appendChild(badge);
     appendCell({ mono: true, style: `color:${modelColor};`, text: shortModel, onClick: expandClick });
     appendCell({ mono: true, text: (s.totalTokens||0).toLocaleString(), onClick: expandClick });
     appendCell({ mono: true, text: costStr, onClick: expandClick });
@@ -2267,16 +2270,31 @@ function updateLimits() {
       var cacheCost = cacheReadCost + cacheWriteCost;
       const wrap = document.createElement('div');
       wrap.style.cssText = 'margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);';
-      wrap.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:6px;">' +
-        '<span class="mono" style="font-size:14px;font-weight:600;">' + escapeHtml(shortModel) + '</span>' +
-        '<span class="mono" style="font-size:14px;font-weight:600;color:var(--accent);">$' + totalModelCost.toFixed(4) + '</span>' +
-        '</div>' +
-        '<div style="display:flex;gap:16px;font-size:11px;color:var(--text-muted);font-family:\'JetBrains Mono\',monospace;">' +
-        '<span>' + data.calls + ' calls</span>' +
-        '<span>' + (data.input/1000).toFixed(0) + 'k in ($' + inputCost.toFixed(4) + ')</span>' +
-        '<span>' + (data.output/1000).toFixed(0) + 'k out ($' + outputCost.toFixed(4) + ')</span>' +
-        (cacheCost > 0 ? '<span>cache ($' + cacheCost.toFixed(4) + ')</span>' : '') +
-        '</div>';
+      const top = document.createElement('div');
+      top.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:6px;';
+      const left = document.createElement('span');
+      left.className = 'mono';
+      left.style.cssText = 'font-size:14px;font-weight:600;';
+      left.textContent = shortModel;
+      const right = document.createElement('span');
+      right.className = 'mono';
+      right.style.cssText = 'font-size:14px;font-weight:600;color:var(--accent);';
+      right.textContent = '$' + totalModelCost.toFixed(4);
+      top.appendChild(left);
+      top.appendChild(right);
+      const meta = document.createElement('div');
+      meta.style.cssText = "display:flex;gap:16px;font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;";
+      [
+        data.calls + ' calls',
+        (data.input/1000).toFixed(0) + 'k in ($' + inputCost.toFixed(4) + ')',
+        (data.output/1000).toFixed(0) + 'k out ($' + outputCost.toFixed(4) + ')'
+      ].concat(cacheCost > 0 ? ['cache ($' + cacheCost.toFixed(4) + ')'] : []).forEach(text => {
+        const span = document.createElement('span');
+        span.textContent = text;
+        meta.appendChild(span);
+      });
+      wrap.appendChild(top);
+      wrap.appendChild(meta);
       windowBreakdownEl.appendChild(wrap);
     });
   }
@@ -2291,7 +2309,28 @@ function updateLimits() {
       const shortModel = call.model.split('/').pop();
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;';
-      row.innerHTML = `<div><div class="mono" style="font-weight:600;">${escapeHtml(shortModel)}</div><div style="color:var(--text-muted);font-size:11px;">${escapeHtml(call.ago)}</div></div><div style="text-align:right;"><div class="mono">${call.output.toLocaleString()} out</div><div style="color:var(--text-muted);font-size:11px;">$${call.cost.toFixed(4)}</div></div>`;
+      const left = document.createElement('div');
+      const model = document.createElement('div');
+      model.className = 'mono';
+      model.style.fontWeight = '600';
+      model.textContent = shortModel;
+      const agoEl = document.createElement('div');
+      agoEl.style.cssText = 'color:var(--text-muted);font-size:11px;';
+      agoEl.textContent = call.ago;
+      left.appendChild(model);
+      left.appendChild(agoEl);
+      const right = document.createElement('div');
+      right.style.textAlign = 'right';
+      const out = document.createElement('div');
+      out.className = 'mono';
+      out.textContent = call.output.toLocaleString() + ' out';
+      const cost = document.createElement('div');
+      cost.style.cssText = 'color:var(--text-muted);font-size:11px;';
+      cost.textContent = '$' + call.cost.toFixed(4);
+      right.appendChild(out);
+      right.appendChild(cost);
+      row.appendChild(left);
+      row.appendChild(right);
       recentCallsEl.appendChild(row);
     });
   }
@@ -2377,7 +2416,17 @@ function updateLimits() {
           const pct = ((d.cost / total) * 100).toFixed(1);
           const row = document.createElement('div');
           row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px;';
-          row.innerHTML = `<div style="width:16px;height:16px;background:${d.color};border-radius:3px;opacity:0.8;"></div><span style="font-size:13px;flex:1;">${escapeHtml(d.model)}</span><span style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;">${pct}%</span>`;
+          const swatch = document.createElement('div');
+          swatch.style.cssText = `width:16px;height:16px;background:${d.color};border-radius:3px;opacity:0.8;`;
+          const name = document.createElement('span');
+          name.style.cssText = 'font-size:13px;flex:1;';
+          name.textContent = d.model;
+          const pctEl = document.createElement('span');
+          pctEl.style.cssText = "font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;";
+          pctEl.textContent = pct + '%';
+          row.appendChild(swatch);
+          row.appendChild(name);
+          row.appendChild(pctEl);
           legend.appendChild(row);
         });
         wrap.appendChild(legend);
@@ -2492,7 +2541,15 @@ function updateCosts() {
       const shortModel = model.split('/').pop();
       const row = document.createElement('div');
       row.style.cssText = 'display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);';
-      row.innerHTML = `<span class="mono">${escapeHtml(shortModel)}</span><span class="mono" style="font-weight:700;">$${cost.toFixed(2)}</span>`;
+      const left = document.createElement('span');
+      left.className = 'mono';
+      left.textContent = shortModel;
+      const right = document.createElement('span');
+      right.className = 'mono';
+      right.style.fontWeight = '700';
+      right.textContent = '$' + cost.toFixed(2);
+      row.appendChild(left);
+      row.appendChild(right);
       costByModelEl.appendChild(row);
     });
   }
@@ -2509,7 +2566,14 @@ function updateCosts() {
     perSessionEntries.forEach(([, v]) => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);';
-      row.innerHTML = `<span>${escapeHtml(v.label)}</span><span class="mono" style="font-weight:700;">$${v.cost.toFixed(2)}</span>`;
+      const left = document.createElement('span');
+      left.textContent = v.label;
+      const right = document.createElement('span');
+      right.className = 'mono';
+      right.style.fontWeight = '700';
+      right.textContent = '$' + v.cost.toFixed(2);
+      row.appendChild(left);
+      row.appendChild(right);
       topSessionsEl.appendChild(row);
     });
   }
@@ -2790,7 +2854,17 @@ async function fetchNewData() {
         const textColor = s.active === null ? 'var(--text-muted)' : (s.active ? 'var(--green)' : 'var(--red)');
         const row = document.createElement('div');
         row.style.cssText = `display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:${isLast ? 'none' : '1px solid var(--border)'};`;
-        row.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${dotColor};flex-shrink:0;"></span><span style="font-weight:600;font-size:14px;">${escapeHtml(s.name)}</span><span style="margin-left:auto;font-size:12px;color:${textColor};">${escapeHtml(status)}</span>`;
+        const dot = document.createElement('span');
+        dot.style.cssText = `width:10px;height:10px;border-radius:50%;background:${dotColor};flex-shrink:0;`;
+        const name = document.createElement('span');
+        name.style.cssText = 'font-weight:600;font-size:14px;';
+        name.textContent = s.name;
+        const statusEl = document.createElement('span');
+        statusEl.style.cssText = `margin-left:auto;font-size:12px;color:${textColor};`;
+        statusEl.textContent = status;
+        row.appendChild(dot);
+        row.appendChild(name);
+        row.appendChild(statusEl);
         servicesStatusEl.appendChild(row);
       });
     }
@@ -2808,8 +2882,12 @@ async function fetchNewData() {
         const toggleBg = c.enabled ? 'rgba(16,185,129,0.2)' : 'var(--bg-tertiary)';
         const row = document.createElement('div');
         row.style.cssText = 'padding:10px 0;border-bottom:1px solid var(--border);';
-        row.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span style="font-weight:600;font-size:13px;flex:1;">${statusIcon} ${escapeHtml(c.name)}</span></div><span class="mono" style="font-size:11px;color:var(--text-muted);">${escapeHtml(c.schedule)}</span><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Next: ${escapeHtml(c.enabled ? nextAgo : 'disabled')} · Last: ${c.lastDuration ? (c.lastDuration / 1000).toFixed(0) + 's' : '--'}</div>`;
-        const header = row.firstElementChild;
+        const header = document.createElement('div');
+        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;';
+        const name = document.createElement('span');
+        name.style.cssText = 'font-weight:600;font-size:13px;flex:1;';
+        name.textContent = `${statusIcon} ${c.name}`;
+        header.appendChild(name);
         const toggleBtn = document.createElement('button');
         toggleBtn.textContent = c.enabled ? 'ON' : 'OFF';
         toggleBtn.style.cssText = `padding:2px 8px;background:${toggleBg};color:${toggleColor};border:1px solid var(--border);border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;margin-right:4px;`;
@@ -2820,6 +2898,16 @@ async function fetchNewData() {
         runBtn.onclick = () => window.runCronJob(c.id);
         header.appendChild(toggleBtn);
         header.appendChild(runBtn);
+        const schedule = document.createElement('span');
+        schedule.className = 'mono';
+        schedule.style.cssText = 'font-size:11px;color:var(--text-muted);';
+        schedule.textContent = c.schedule;
+        const meta = document.createElement('div');
+        meta.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:4px;';
+        meta.textContent = `Next: ${c.enabled ? nextAgo : 'disabled'} · Last: ${c.lastDuration ? (c.lastDuration / 1000).toFixed(0) + 's' : '--'}`;
+        row.appendChild(header);
+        row.appendChild(schedule);
+        row.appendChild(meta);
         cronJobsEl.appendChild(row);
       });
     }
@@ -2879,7 +2967,23 @@ window.runCronJob = async function(id) {
         const ago = age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
         const row = document.createElement('div');
         row.style.cssText = 'display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;';
-        row.innerHTML = `<span class="mono" style="color:var(--accent);flex-shrink:0;">${escapeHtml(c.hash)}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.message)}</span><span style="flex-shrink:0;color:var(--text-muted);">${escapeHtml(c.repo)}</span><span style="flex-shrink:0;color:var(--text-muted);">${escapeHtml(ago)}</span>`;
+        const hash = document.createElement('span');
+        hash.className = 'mono';
+        hash.style.cssText = 'color:var(--accent);flex-shrink:0;';
+        hash.textContent = c.hash;
+        const msg = document.createElement('span');
+        msg.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+        msg.textContent = c.message;
+        const repo = document.createElement('span');
+        repo.style.cssText = 'flex-shrink:0;color:var(--text-muted);';
+        repo.textContent = c.repo;
+        const agoEl = document.createElement('span');
+        agoEl.style.cssText = 'flex-shrink:0;color:var(--text-muted);';
+        agoEl.textContent = ago;
+        row.appendChild(hash);
+        row.appendChild(msg);
+        row.appendChild(repo);
+        row.appendChild(agoEl);
         gitActivityEl.appendChild(row);
       });
     }
