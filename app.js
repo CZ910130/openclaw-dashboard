@@ -3070,53 +3070,45 @@ function showComparison() {
   const s1 = sessions.find(s => s.key === keys[0]);
   const s2 = sessions.find(s => s.key === keys[1]);
   if (!s1 || !s2) return;
-  
-  const maxTokens = Math.max(s1.totalTokens || 0, s2.totalTokens || 0);
-  const maxCost = Math.max(s1.cost || 0, s2.cost || 0);
-  
+
+  const maxTokens = Math.max(s1.totalTokens || 0, s2.totalTokens || 0, 1);
+  const maxCost = Math.max(s1.cost || 0, s2.cost || 0, 0.0001);
+
   const modal = document.getElementById('sessionModal');
+  const modalStats = modal.querySelector('#modalStats');
+  const modalMessages = modal.querySelector('#modalMessages');
   modal.querySelector('#modalTitle').textContent = 'Session Comparison';
   modal.querySelector('#modalKey').textContent = '';
-  modal.querySelector('#modalStats').innerHTML = `
-    <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:24px;">
-      <div>
-        <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--accent);">${s1.label}</h3>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div><span style="color:var(--text-muted);font-size:12px;">Model:</span> <span class="mono">${s1.model.split('/').pop()}</span></div>
-          <div><span style="color:var(--text-muted);font-size:12px;">Tokens:</span> <span class="mono">${(s1.totalTokens||0).toLocaleString()}</span></div>
-          <div><span style="color:var(--text-muted);font-size:12px;">Cost:</span> <span class="mono">$${(s1.cost||0).toFixed(2)}</span></div>
-          <div style="margin-top:12px;">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Tokens</div>
-            <div style="height:24px;background:var(--bg-primary);border-radius:6px;overflow:hidden;">
-              <div style="height:100%;width:${Math.round(((s1.totalTokens||0)/maxTokens)*100)}%;background:var(--accent);border-radius:6px;"></div>
-            </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:8px;margin-bottom:4px;">Cost</div>
-            <div style="height:24px;background:var(--bg-primary);border-radius:6px;overflow:hidden;">
-              <div style="height:100%;width:${Math.round(((s1.cost||0)/maxCost)*100)}%;background:var(--green);border-radius:6px;"></div>
-            </div>
+  modalStats.innerHTML = '';
+
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:24px;';
+  [
+    { s: s1, color: 'var(--accent)', costColor: 'var(--green)' },
+    { s: s2, color: 'var(--purple)', costColor: 'var(--cyan)' }
+  ].forEach(({ s, color, costColor }) => {
+    const col = document.createElement('div');
+    col.innerHTML = `
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:${color};">${escapeHtml(s.label)}</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div><span style="color:var(--text-muted);font-size:12px;">Model:</span> <span class="mono">${escapeHtml(s.model.split('/').pop())}</span></div>
+        <div><span style="color:var(--text-muted);font-size:12px;">Tokens:</span> <span class="mono">${(s.totalTokens||0).toLocaleString()}</span></div>
+        <div><span style="color:var(--text-muted);font-size:12px;">Cost:</span> <span class="mono">$${(s.cost||0).toFixed(2)}</span></div>
+        <div style="margin-top:12px;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Tokens</div>
+          <div style="height:24px;background:var(--bg-primary);border-radius:6px;overflow:hidden;">
+            <div style="height:100%;width:${Math.round(((s.totalTokens||0)/maxTokens)*100)}%;background:${color};border-radius:6px;"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:8px;margin-bottom:4px;">Cost</div>
+          <div style="height:24px;background:var(--bg-primary);border-radius:6px;overflow:hidden;">
+            <div style="height:100%;width:${Math.round(((s.cost||0)/maxCost)*100)}%;background:${costColor};border-radius:6px;"></div>
           </div>
         </div>
-      </div>
-      <div>
-        <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--purple);">${s2.label}</h3>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div><span style="color:var(--text-muted);font-size:12px;">Model:</span> <span class="mono">${s2.model.split('/').pop()}</span></div>
-          <div><span style="color:var(--text-muted);font-size:12px;">Tokens:</span> <span class="mono">${(s2.totalTokens||0).toLocaleString()}</span></div>
-          <div><span style="color:var(--text-muted);font-size:12px;">Cost:</span> <span class="mono">$${(s2.cost||0).toFixed(2)}</span></div>
-          <div style="margin-top:12px;">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Tokens</div>
-            <div style="height:24px;background:var(--bg-primary);border-radius:6px;overflow:hidden;">
-              <div style="height:100%;width:${Math.round(((s2.totalTokens||0)/maxTokens)*100)}%;background:var(--purple);border-radius:6px;"></div>
-            </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:8px;margin-bottom:4px;">Cost</div>
-            <div style="height:24px;background:var(--bg-primary);border-radius:6px;overflow:hidden;">
-              <div style="height:100%;width:${Math.round(((s2.cost||0)/maxCost)*100)}%;background:var(--cyan);border-radius:6px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  modal.querySelector('#modalMessages').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);">Comparison complete</div>';
+      </div>`;
+    wrapper.appendChild(col);
+  });
+  modalStats.appendChild(wrapper);
+  modalMessages.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);">Comparison complete</div>';
   modal.style.display = 'flex';
 }
 
@@ -3143,36 +3135,48 @@ const _origUpdateOverview = updateOverview;
 function openSessionDetail(key) {
   const s = sessions.find(x => x.key === key);
   if (!s) return;
-  document.getElementById('modalTitle').textContent = s.label;
-  document.getElementById('modalKey').textContent = s.key;
+  const modalTitle = document.getElementById('modalTitle');
+  const modalKey = document.getElementById('modalKey');
+  const modalStats = document.getElementById('modalStats');
+  const modalMessages = document.getElementById('modalMessages');
+  modalTitle.textContent = s.label;
+  modalKey.textContent = s.key;
   const age = Date.now() - s.updatedAt;
   const ago = age < 60000 ? 'just now' : age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
   const isActive = age < 300000 && !s.aborted;
-  document.getElementById('modalStats').innerHTML = `
-    <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Status</div><div style="font-weight:600;color:${isActive ? 'var(--green)' : 'var(--text-primary)'}">${isActive ? '🟢 Active' : s.aborted ? '🔴 Aborted' : '⚪ Idle'}</div></div>
-    <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Model</div><div class="mono" style="font-size:13px;">${escapeHtml(s.model.split('/').pop())}</div></div>
-    <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Tokens</div><div class="mono" style="font-size:13px;">${(s.totalTokens||0).toLocaleString()}</div></div>
-    <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Cost</div><div class="mono" style="font-size:13px;">$${(s.cost||0).toFixed(2)}</div></div>
-    <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Last Active</div><div style="font-size:13px;">${escapeHtml(ago)}</div></div>
-    <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Channel</div><div style="font-size:13px;">${escapeHtml(s.channel || '--')}</div></div>`;
-  document.getElementById('modalMessages').innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading...</div>';
+  modalStats.innerHTML = '';
+  [
+    ['Status', isActive ? '🟢 Active' : s.aborted ? '🔴 Aborted' : '⚪ Idle', isActive ? 'var(--green)' : 'var(--text-primary)', false],
+    ['Model', s.model.split('/').pop(), null, true],
+    ['Tokens', (s.totalTokens||0).toLocaleString(), null, true],
+    ['Cost', '$' + (s.cost||0).toFixed(2), null, true],
+    ['Last Active', ago, null, false],
+    ['Channel', s.channel || '--', null, false]
+  ].forEach(([label, value, color, mono]) => {
+    const box = document.createElement('div');
+    box.innerHTML = `<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">${escapeHtml(label)}</div><div class="${mono ? 'mono' : ''}" style="font-size:13px;${color ? 'font-weight:600;color:' + color + ';' : ''}">${escapeHtml(value)}</div>`;
+    modalStats.appendChild(box);
+  });
+  modalMessages.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading...</div>';
   document.getElementById('sessionModal').style.display = 'flex';
   authFetch(API_BASE + '/api/session-messages?id=' + encodeURIComponent(s.sessionId || s.key))
     .then(r => r.json())
     .then(msgs => {
-      document.getElementById('modalMessages').innerHTML = msgs.map(m => {
+      if (!msgs.length) {
+        modalMessages.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No messages found</div>';
+        return;
+      }
+      modalMessages.innerHTML = '';
+      msgs.forEach(m => {
         const roleColor = m.role === 'user' ? 'var(--blue)' : m.role === 'assistant' ? 'var(--green)' : 'var(--yellow)';
         const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : '';
-        return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;">
-          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-            <span style="font-weight:600;color:${roleColor};text-transform:uppercase;font-size:10px;">${escapeHtml(m.role)}</span>
-            <span style="color:var(--text-muted);font-size:10px;">${escapeHtml(time)}</span>
-          </div>
-          <div style="color:var(--text-primary);line-height:1.4;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;">${escapeHtml(m.content)}</div>
-        </div>`;
-      }).join('') || '<div style="color:var(--text-muted);font-size:13px;">No messages found</div>';
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;';
+        row.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-weight:600;color:${roleColor};text-transform:uppercase;font-size:10px;">${escapeHtml(m.role)}</span><span style="color:var(--text-muted);font-size:10px;">${escapeHtml(time)}</span></div><div style="color:var(--text-primary);line-height:1.4;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;">${escapeHtml(m.content)}</div>`;
+        modalMessages.appendChild(row);
+      });
     }).catch(() => {
-      document.getElementById('modalMessages').innerHTML = '<div style="color:var(--text-muted);">Failed to load</div>';
+      modalMessages.innerHTML = '<div style="color:var(--text-muted);">Failed to load</div>';
     });
 }
 function closeSessionModal() { document.getElementById('sessionModal').style.display = 'none'; }
@@ -3271,7 +3275,7 @@ async function fetchTailscaleStatus() {
     if (!statusEl) return;
     
     if (data.error) {
-      statusEl.innerHTML = `<div style="color:var(--text-muted);">${data.error}</div>`;
+      statusEl.innerHTML = `<div style="color:var(--text-muted);">${escapeHtml(data.error)}</div>`;
       return;
     }
     
