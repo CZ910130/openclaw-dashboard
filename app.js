@@ -2639,17 +2639,31 @@ function connectLiveFeed() {
       item.dataset.session = sessionName;
       item.dataset.role = roleClass;
       if (!visible) item.style.display = 'none';
-      item.innerHTML = `
-        <div class="feed-header-line">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="background:${sessionColor};color:#fff;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:0.02em;">${escapeHtml(sessionName)}</span>
-            <span class="feed-role ${roleClass}">${escapeHtml(roleLabel)}</span>
-          </div>
-          <span class="feed-time">${escapeHtml(time)}</span>
-        </div>
-        <div class="feed-content">${escapeHtml(data.content || '')}</div>
-      `;
-      
+
+      const header = document.createElement('div');
+      header.className = 'feed-header-line';
+      const left = document.createElement('div');
+      left.style.cssText = 'display:flex;align-items:center;gap:8px;';
+      const sessionTag = document.createElement('span');
+      sessionTag.style.cssText = `background:${sessionColor};color:#fff;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:0.02em;`;
+      sessionTag.textContent = sessionName;
+      const roleTag = document.createElement('span');
+      roleTag.className = `feed-role ${roleClass}`;
+      roleTag.textContent = roleLabel;
+      left.appendChild(sessionTag);
+      left.appendChild(roleTag);
+      const timeTag = document.createElement('span');
+      timeTag.className = 'feed-time';
+      timeTag.textContent = time;
+      header.appendChild(left);
+      header.appendChild(timeTag);
+
+      const content = document.createElement('div');
+      content.className = 'feed-content';
+      content.textContent = data.content || '';
+
+      item.appendChild(header);
+      item.appendChild(content);
       feed.insertBefore(item, feed.firstChild);
       
       const items = feed.querySelectorAll('.feed-item');
@@ -2935,6 +2949,62 @@ window.runCronJob = async function(id) {
   } catch (e) { console.error('New data fetch error:', e); }
 }
 
+function appendInlineFormatted(parent, text) {
+  const re = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+  let last = 0;
+  const str = String(text || '');
+  let m;
+  while ((m = re.exec(str)) !== null) {
+    if (m.index > last) parent.appendChild(document.createTextNode(str.slice(last, m.index)));
+    const token = m[0];
+    if (token.startsWith('**') && token.endsWith('**')) {
+      const strong = document.createElement('strong');
+      strong.style.cssText = 'color:var(--text-primary);font-weight:700;';
+      strong.textContent = token.slice(2, -2);
+      parent.appendChild(strong);
+    } else if (token.startsWith('`') && token.endsWith('`')) {
+      const code = document.createElement('code');
+      code.style.cssText = 'background:var(--bg-tertiary);padding:2px 6px;border-radius:4px;font-size:11px;';
+      code.textContent = token.slice(1, -1);
+      parent.appendChild(code);
+    }
+    last = m.index + token.length;
+  }
+  if (last < str.length) parent.appendChild(document.createTextNode(str.slice(last)));
+}
+
+function renderSimpleMarkdown(target, content) {
+  target.innerHTML = '';
+  String(content || '').split('\n').forEach(line => {
+    if (!line.trim()) {
+      target.appendChild(document.createElement('br'));
+      return;
+    }
+    const block = document.createElement('div');
+    if (line.startsWith('### ')) {
+      block.style.cssText = 'font-size:16px;font-weight:700;color:var(--accent);margin:16px 0 8px;';
+      appendInlineFormatted(block, line.slice(4));
+    } else if (line.startsWith('## ')) {
+      block.style.cssText = 'font-size:18px;font-weight:700;color:var(--accent);margin:20px 0 12px;';
+      appendInlineFormatted(block, line.slice(3));
+    } else if (line.startsWith('# ')) {
+      block.style.cssText = 'font-size:20px;font-weight:700;color:var(--accent);margin:24px 0 16px;';
+      appendInlineFormatted(block, line.slice(2));
+    } else {
+      appendInlineFormatted(block, line);
+    }
+    target.appendChild(block);
+  });
+}
+
+function setViewerMessage(target, message, color = 'var(--text-muted)') {
+  target.innerHTML = '';
+  const div = document.createElement('div');
+  div.style.color = color;
+  div.textContent = message;
+  target.appendChild(div);
+}
+
 // Memory page
 let memoryFiles = [];
 async function fetchMemoryFiles() {
@@ -2975,18 +3045,12 @@ window.loadMemoryFile = async function(name) {
     const titleEl = document.getElementById('memoryFileTitle');
     const contentEl = document.getElementById('memoryFileContent');
     titleEl.textContent = name;
-    contentEl.innerHTML = '<div style="color:var(--text-muted);">Loading...</div>';
+    setViewerMessage(contentEl, 'Loading...');
     const res = await authFetch(API_BASE + '/api/memory-file?path=' + encodeURIComponent(name));
     const content = await res.text();
-    let html = escapeHtml(content)
-      .replace(/^### (.+)$/gm, '<div style="font-size:16px;font-weight:700;color:var(--accent);margin:16px 0 8px;">$1</div>')
-      .replace(/^## (.+)$/gm, '<div style="font-size:18px;font-weight:700;color:var(--accent);margin:20px 0 12px;">$1</div>')
-      .replace(/^# (.+)$/gm, '<div style="font-size:20px;font-weight:700;color:var(--accent);margin:24px 0 16px;">$1</div>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text-primary);font-weight:700;">$1</strong>')
-      .replace(/`([^`]+)`/g, '<code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:4px;font-size:11px;">$1</code>');
-    contentEl.innerHTML = html;
+    renderSimpleMarkdown(contentEl, content);
   } catch (e) {
-    document.getElementById('memoryFileContent').innerHTML = '<div style="color:var(--red);">Failed to load file</div>';
+    setViewerMessage(document.getElementById('memoryFileContent'), 'Failed to load file', 'var(--red)');
   }
 };
 
@@ -3041,7 +3105,7 @@ window.loadKeyFile = async function(name) {
   const cancelBtn = document.getElementById('keyFileCancelBtn');
 
   titleEl.textContent = name;
-  contentEl.innerHTML = '<div style="color:var(--text-muted);">Loading...</div>';
+  setViewerMessage(contentEl, 'Loading...');
   contentEl.style.display = 'block';
   editorEl.style.display = 'none';
   editBtn.style.display = 'inline-block';
@@ -3052,23 +3116,21 @@ window.loadKeyFile = async function(name) {
 
   try {
     const res = await authFetch(API_BASE + '/api/key-file?path=' + encodeURIComponent(name));
-    if (!res.ok) { contentEl.innerHTML = '<div style="color:var(--red);">Failed to load: ' + res.status + '</div>'; return; }
+    if (!res.ok) { setViewerMessage(contentEl, 'Failed to load: ' + res.status, 'var(--red)'); return; }
     const content = await res.text();
     _currentKeyFileRaw = content;
 
     if (name.endsWith('.md')) {
-      let html = escapeHtml(content)
-        .replace(/^### (.+)$/gm, '<div style="font-size:16px;font-weight:700;color:var(--accent);margin:16px 0 8px;">$1</div>')
-        .replace(/^## (.+)$/gm, '<div style="font-size:18px;font-weight:700;color:var(--accent);margin:20px 0 12px;">$1</div>')
-        .replace(/^# (.+)$/gm, '<div style="font-size:20px;font-weight:700;color:var(--accent);margin:24px 0 16px;">$1</div>')
-        .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text-primary);font-weight:700;">$1</strong>')
-        .replace(/`([^`]+)`/g, '<code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:4px;font-size:11px;">$1</code>');
-      contentEl.innerHTML = html;
+      renderSimpleMarkdown(contentEl, content);
     } else {
-      contentEl.innerHTML = '<pre style="white-space:pre-wrap;word-wrap:break-word;">' + escapeHtml(content) + '</pre>';
+      contentEl.innerHTML = '';
+      const pre = document.createElement('pre');
+      pre.style.cssText = 'white-space:pre-wrap;word-wrap:break-word;';
+      pre.textContent = content;
+      contentEl.appendChild(pre);
     }
   } catch (e) {
-    contentEl.innerHTML = '<div style="color:var(--red);">Failed to load file</div>';
+    setViewerMessage(contentEl, 'Failed to load file', 'var(--red)');
   }
 };
 
@@ -4124,7 +4186,11 @@ async function fetchNotifications() {
     const data = await res.json();
     const body = document.getElementById('notifPanelBody');
     if (!data.events || !data.events.length) {
-      body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);">No events yet</div>';
+      body.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:20px;text-align:center;color:var(--text-muted);';
+      empty.textContent = 'No events yet';
+      body.appendChild(empty);
       return;
     }
     body.innerHTML = '';
@@ -4135,7 +4201,21 @@ async function fetchNotifications() {
       const ip = e.ip ? ' from ' + e.ip : '';
       const item = document.createElement('div');
       item.className = 'notif-item';
-      item.innerHTML = `<div class="notif-icon">${icon}</div><div class="notif-content"><div class="notif-event">${escapeHtml((notifLabels[e.event] || (e.event||'').replace(/_/g, ' ')) + detail + ip)}</div><div class="notif-time">${escapeHtml(time)}</div></div>`;
+      const iconEl = document.createElement('div');
+      iconEl.className = 'notif-icon';
+      iconEl.textContent = icon;
+      const contentEl = document.createElement('div');
+      contentEl.className = 'notif-content';
+      const eventEl = document.createElement('div');
+      eventEl.className = 'notif-event';
+      eventEl.textContent = (notifLabels[e.event] || (e.event||'').replace(/_/g, ' ')) + detail + ip;
+      const timeEl = document.createElement('div');
+      timeEl.className = 'notif-time';
+      timeEl.textContent = time;
+      contentEl.appendChild(eventEl);
+      contentEl.appendChild(timeEl);
+      item.appendChild(iconEl);
+      item.appendChild(contentEl);
       body.appendChild(item);
     });
     if (data.events.length) {
