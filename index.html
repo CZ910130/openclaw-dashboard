@@ -307,7 +307,7 @@
       <div class="grid grid-2 mb-24">
         <div class="card">
           <h3 class="card-title">Quick Actions</h3>
-          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+          <div class="quick-actions-grid">
             <button onclick="quickAction('restart-openclaw', event)" class="qa-btn qa-danger">🔄 Restart OpenClaw</button>
             <button onclick="quickAction('restart-dashboard', event)" class="qa-btn">🔄 Restart Dashboard</button>
             <button onclick="quickAction('clear-cache', event)" class="qa-btn">🗑️ Clear Cache</button>
@@ -324,8 +324,8 @@
         </div>
         <div class="card">
           <h3 class="card-title">Tailscale Status</h3>
-          <div id="tailscaleStatus" style="display:flex;flex-direction:column;gap:12px;">
-            <div style="font-size:13px;color:var(--text-muted);">Loading...</div>
+          <div id="tailscaleStatus" class="status-stack">
+            <div class="status-loading-text">Loading...</div>
           </div>
         </div>
       </div>
@@ -333,33 +333,33 @@
       <div class="grid grid-2 mb-24">
         <div class="card">
           <h3 class="card-title">Lifetime Stats</h3>
-          <div id="lifetimeStats" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
-            <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;">Total Tokens</div><div class="mono" style="font-size:20px;font-weight:700;" id="ltTokens">--</div></div>
-            <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;">Total Messages</div><div class="mono" style="font-size:20px;font-weight:700;" id="ltMessages">--</div></div>
-            <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;">Total Cost</div><div class="mono" style="font-size:20px;font-weight:700;color:var(--accent);" id="ltCost">--</div></div>
-            <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;">Total Sessions</div><div class="mono" style="font-size:20px;font-weight:700;" id="ltSessions">--</div></div>
-            <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;">First Session</div><div style="font-size:13px;font-weight:600;" id="ltFirstDate">--</div></div>
-            <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;">Days Active</div><div style="font-size:20px;font-weight:700;color:var(--green);" id="ltDaysActive">--</div></div>
+          <div id="lifetimeStats" class="lifetime-stats-grid">
+            <div><div class="lifetime-stat-label">Total Tokens</div><div class="mono lifetime-stat-value" id="ltTokens">--</div></div>
+            <div><div class="lifetime-stat-label">Total Messages</div><div class="mono lifetime-stat-value" id="ltMessages">--</div></div>
+            <div><div class="lifetime-stat-label">Total Cost</div><div class="mono lifetime-stat-value lifetime-stat-value-accent" id="ltCost">--</div></div>
+            <div><div class="lifetime-stat-label">Total Sessions</div><div class="mono lifetime-stat-value" id="ltSessions">--</div></div>
+            <div><div class="lifetime-stat-label">First Session</div><div class="lifetime-stat-date" id="ltFirstDate">--</div></div>
+            <div><div class="lifetime-stat-label">Days Active</div><div class="lifetime-stat-value lifetime-stat-value-green" id="ltDaysActive">--</div></div>
           </div>
         </div>
-        <div class="card" style="position:relative;">
+        <div class="card activity-streak-card">
           <h3 class="card-title">Activity Streak</h3>
-          <div style="position:relative;margin-bottom:16px;">
-            <div style="display:flex;align-items:center;gap:16px;">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span style="font-size:28px;">🔥</span>
+          <div class="activity-streak-header">
+            <div class="activity-streak-stats">
+              <div class="activity-streak-current">
+                <span class="activity-streak-emoji">🔥</span>
                 <div>
-                  <div style="font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent);line-height:1;" id="currentStreak">0</div>
-                  <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Current</div>
+                  <div class="activity-streak-current-value" id="currentStreak">0</div>
+                  <div class="activity-streak-label">Current</div>
                 </div>
               </div>
-              <div style="width:1px;height:32px;background:var(--border);"></div>
+              <div class="activity-streak-divider"></div>
               <div>
-                <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1;" id="longestStreak">0</div>
-                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Longest</div>
+                <div class="activity-streak-longest-value" id="longestStreak">0</div>
+                <div class="activity-streak-label">Longest</div>
               </div>
             </div>
-            <div id="streakLegend" class="contrib-legend" style="margin-top:0;position:absolute;right:24px;top:50%;transform:translateY(-50%);"></div>
+            <div id="streakLegend" class="contrib-legend activity-streak-legend"></div>
           </div>
           <div id="streakCalendar" class="contrib-graph-wrapper"></div>
         </div>
@@ -401,30 +401,30 @@
         <p class="page-subtitle">All agent sessions and their activity</p>
       </div>
 
-      <div class="card mb-24" id="sessionsStatsBar" style="padding:16px 24px;">
-        <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:center;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Sessions</span>
-            <span class="mono" style="font-size:20px;font-weight:700;" id="statsSessionCount">0</span>
+      <div class="card mb-24 sessions-stats-card" id="sessionsStatsBar">
+        <div class="sessions-stats-row">
+          <div class="sessions-stat-item">
+            <span class="sessions-stat-label">Sessions</span>
+            <span class="mono sessions-stat-value" id="statsSessionCount">0</span>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Tokens</span>
-            <span class="mono" style="font-size:20px;font-weight:700;" id="statsTotalTokens">0</span>
+          <div class="sessions-stat-item">
+            <span class="sessions-stat-label">Tokens</span>
+            <span class="mono sessions-stat-value" id="statsTotalTokens">0</span>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Cost</span>
-            <span class="mono" style="font-size:20px;font-weight:700;color:var(--accent);" id="statsTotalCost">$0.00</span>
+          <div class="sessions-stat-item">
+            <span class="sessions-stat-label">Cost</span>
+            <span class="mono sessions-stat-value sessions-stat-value-accent" id="statsTotalCost">$0.00</span>
           </div>
         </div>
       </div>
 
-      <div class="card mb-24" style="padding:16px 24px;">
-        <h3 class="card-title" style="margin-bottom:12px;">Session Timeline</h3>
-        <div id="timelineCanvas" style="min-height:60px;"></div>
+      <div class="card mb-24 sessions-timeline-card">
+        <h3 class="card-title sessions-timeline-title">Session Timeline</h3>
+        <div id="timelineCanvas" class="timeline-canvas"></div>
       </div>
 
 
-      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:20px;padding:16px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;">
+      <div class="sessions-filters-bar">
         <div class="filter-chips" id="statusFilters">
           <div class="chip active" data-filter="all">All</div>
           <div class="chip" data-filter="running">Active</div>
@@ -433,25 +433,25 @@
           <div class="chip" data-filter="cron">Cron</div>
           <div class="chip" data-filter="group">Groups</div>
         </div>
-        <div style="width:1px;height:24px;background:var(--border);"></div>
+        <div class="filter-divider"></div>
         <div class="filter-chips" id="modelFilters">
           <div class="chip active" data-model="all">All Models</div>
           <div class="chip" data-model="opus-4-6">Opus</div>
           <div class="chip" data-model="sonnet">Sonnet</div>
 
         </div>
-        <div style="width:1px;height:24px;background:var(--border);"></div>
+        <div class="filter-divider"></div>
         <div class="filter-chips" id="dateFilters">
           <div class="chip" data-range="today">Today</div>
           <div class="chip active" data-range="7d">7d</div>
           <div class="chip" data-range="30d">30d</div>
           <div class="chip" data-range="all">All</div>
         </div>
-        <input type="search" class="search-box" placeholder="🔍 Search..." id="sessionSearch" aria-label="Search sessions" style="max-width:250px;">
+        <input type="search" class="search-box sessions-search" placeholder="🔍 Search..." id="sessionSearch" aria-label="Search sessions">
       </div>
 
       <div class="sessions-table">
-        <div class="table-header" style="grid-template-columns: 24px 32px 150px 70px 90px 90px 80px 1fr 90px;">
+        <div class="table-header sessions-table-header-grid">
           <div></div>
           <div></div>
           <div class="sortable" data-sort="label">Name</div>
