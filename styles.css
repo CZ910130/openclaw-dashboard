@@ -66,6 +66,156 @@ body {
   word-break: break-all;
 }
 
+.file-list-item {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.file-list-item-selected,
+.file-list-item-hover {
+  background: var(--bg-tertiary);
+}
+
+.file-list-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.file-list-item-icon {
+  font-size: 18px;
+}
+
+.file-list-item-name {
+  font-weight: 600;
+  font-size: 13px;
+  flex: 1;
+}
+
+.file-list-item-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.compare-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.compare-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.compare-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.compare-label {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.compare-bars {
+  margin-top: 12px;
+}
+
+.compare-bar-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.compare-bar-label-spaced {
+  margin-top: 8px;
+}
+
+.compare-bar-track {
+  height: 24px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.compare-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+}
+
+.compare-complete-note {
+  padding: 20px;
+  text-align: center;
+}
+
+.tailscale-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.tailscale-row-bordered {
+  border-bottom: 1px solid var(--border);
+}
+
+.tailscale-label {
+  color: var(--text-muted);
+}
+
+.tailscale-value-mono {
+  font-size: 13px;
+}
+
+.tailscale-routes {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.tailscale-routes-title {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.tailscale-route-line {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.stats-duration {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stats-duration-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stats-duration-value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.session-duration-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
 .app {
   display: flex;
   min-height: calc(100vh - 40px);
