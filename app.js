@@ -1433,31 +1433,39 @@ function updateOverview() {
   const dailySpendChartEl = document.getElementById('dailySpendChart');
   if (chartHtml) dailySpendChartEl.innerHTML = chartHtml;
   else setEmptyState(dailySpendChartEl, 'No data');
-  
-  // Add spend summary below chart
+
   const summaryEl = document.getElementById('dailySpendSummary');
-  if (summaryEl && days.length > 0) {
-    const vals = days.map(d => perDay[d] || 0);
-    const total = vals.reduce((a, b) => a + b, 0);
-    const avg = total / vals.length;
-    const maxDay = days[vals.indexOf(Math.max(...vals))];
-    const maxVal = Math.max(...vals);
-    
-    summaryEl.innerHTML = `
-      <div>
-        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">7-Day Total</div>
-        <div style="font-size:18px;font-weight:700;color:var(--accent);font-family:'JetBrains Mono',monospace;">$${total.toFixed(2)}</div>
-      </div>
-      <div>
-        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Daily Avg</div>
-        <div style="font-size:18px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace;">$${avg.toFixed(2)}</div>
-      </div>
-      <div>
-        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Peak Day</div>
-        <div style="font-size:14px;font-weight:600;color:var(--text-primary);">${new Date(maxDay).toLocaleDateString('en',{month:'short',day:'numeric'})}</div>
-        <div style="font-size:12px;color:var(--yellow);font-family:'JetBrains Mono',monospace;">$${maxVal.toFixed(2)}</div>
-      </div>
-    `;
+  if (summaryEl) {
+    summaryEl.innerHTML = '';
+    if (days.length > 0) {
+      const vals = days.map(d => perDay[d] || 0);
+      const total = vals.reduce((a, b) => a + b, 0);
+      const avg = total / vals.length;
+      const maxDay = days[vals.indexOf(Math.max(...vals))];
+      const maxVal = Math.max(...vals);
+      [
+        ['7-Day Total', '$' + total.toFixed(2), 'var(--accent)', '18px', null],
+        ['Daily Avg', '$' + avg.toFixed(2), 'var(--green)', '18px', null],
+        ['Peak Day', new Date(maxDay).toLocaleDateString('en',{month:'short',day:'numeric'}), 'var(--text-primary)', '14px', '$' + maxVal.toFixed(2)]
+      ].forEach(([label, value, color, size, sub]) => {
+        const box = document.createElement('div');
+        const labelEl = document.createElement('div');
+        labelEl.style.cssText = 'font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;';
+        labelEl.textContent = label;
+        const valueEl = document.createElement('div');
+        valueEl.style.cssText = `font-size:${size};font-weight:${size === '18px' ? '700' : '600'};color:${color};${size === '18px' ? "font-family:'JetBrains Mono',monospace;" : ''}`;
+        valueEl.textContent = value;
+        box.appendChild(labelEl);
+        box.appendChild(valueEl);
+        if (sub) {
+          const subEl = document.createElement('div');
+          subEl.style.cssText = "font-size:12px;color:var(--yellow);font-family:'JetBrains Mono',monospace;";
+          subEl.textContent = sub;
+          box.appendChild(subEl);
+        }
+        summaryEl.appendChild(box);
+      });
+    }
   }
 }
 
@@ -1615,37 +1623,42 @@ function renderTimeline(filtered) {
   const start = now - rangeMs;
   const seen = new Set();
   const items = filtered.filter(s => s.updatedAt > start).sort((a, b) => b.updatedAt - a.updatedAt).filter(s => { if (seen.has(s.label)) return false; seen.add(s.label); return true; }).slice(0, 12);
-  if (!items.length) { document.getElementById('timelineCanvas').innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No sessions in range</div>'; return; }
+  const timelineEl = document.getElementById('timelineCanvas');
+  if (!items.length) {
+    setEmptyState(timelineEl, 'No sessions in range');
+    return;
+  }
 
   const colors = { main: 'var(--accent)', sub: 'var(--cyan)', cron: 'var(--yellow)', group: 'var(--blue)' };
   const isMobile = window.innerWidth <= 768;
-  const ticks = [];
   const tickCount = dateRange === 'today' ? 6 : (isMobile ? 3 : 7);
-  for (let i = 0; i <= tickCount; i++) {
-    const t = start + (rangeMs / tickCount) * i;
-    const d = new Date(t);
-    const label = dateRange === 'today' ? d.toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : d.toLocaleDateString('en', {month:'short',day:'numeric'});
-    ticks.push({pct: (i / tickCount) * 100, label});
-  }
+  timelineEl.innerHTML = '';
 
-  const ticksHtml = ticks.map(t => `<div style="position:absolute;left:${t.pct}%;bottom:0;transform:translateX(-50%);font-size:9px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;white-space:nowrap;">${t.label}</div>`).join('');
-
-  const rows = items.map(s => {
+  items.forEach(s => {
     const typeClass = s.key.includes('subagent') ? 'sub' : s.key.includes('cron') ? 'cron' : s.kind === 'group' ? 'group' : 'main';
     const color = colors[typeClass] || 'var(--accent)';
     const created = Math.max(s.createdAt || s.updatedAt, start);
     const leftPct = Math.max(((created - start) / rangeMs) * 100, 0);
     const rightPct = Math.min(((s.updatedAt - start) / rangeMs) * 100, 100);
     const widthPct = Math.max(rightPct - leftPct, 1);
-    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <div style="width:100px;flex-shrink:0;font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;color:var(--text-secondary);">${s.label}</div>
-      <div style="flex:1;height:14px;background:var(--bg-primary);border-radius:4px;position:relative;overflow:hidden;">
-        <div style="position:absolute;left:${leftPct}%;width:${widthPct}%;height:100%;background:${color};border-radius:4px;opacity:0.8;"></div>
-      </div>
-    </div>`;
-  }).join('');
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
+    row.innerHTML = `<div style="width:100px;flex-shrink:0;font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;color:var(--text-secondary);">${escapeHtml(s.label)}</div><div style="flex:1;height:14px;background:var(--bg-primary);border-radius:4px;position:relative;overflow:hidden;"><div style="position:absolute;left:${leftPct}%;width:${widthPct}%;height:100%;background:${color};border-radius:4px;opacity:0.8;"></div></div>`;
+    timelineEl.appendChild(row);
+  });
 
-  document.getElementById('timelineCanvas').innerHTML = rows + `<div style="position:relative;height:18px;margin-left:108px;">${ticksHtml}</div>`;
+  const ticksWrap = document.createElement('div');
+  ticksWrap.style.cssText = 'position:relative;height:18px;margin-left:108px;';
+  for (let i = 0; i <= tickCount; i++) {
+    const t = start + (rangeMs / tickCount) * i;
+    const d = new Date(t);
+    const label = dateRange === 'today' ? d.toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : d.toLocaleDateString('en', {month:'short',day:'numeric'});
+    const tick = document.createElement('div');
+    tick.style.cssText = `position:absolute;left:${(i / tickCount) * 100}%;bottom:0;transform:translateX(-50%);font-size:9px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;white-space:nowrap;`;
+    tick.textContent = label;
+    ticksWrap.appendChild(tick);
+  }
+  timelineEl.appendChild(ticksWrap);
 }
 
 function toggleSessionExpand(key, e) {
@@ -2191,9 +2204,13 @@ function updateLimits() {
   document.getElementById('windowResetValue').textContent = resetIn > 0 ? formatMs(resetIn) : 'No window';
   document.getElementById('windowResetSub').textContent = (usage.fiveHour && usage.fiveHour.windowStart) ? 'Since ' + new Date(usage.fiveHour.windowStart).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : '';
 
-  var windowHtml = Object.entries(models)
-    .sort(function(a, b) { return b[1].output - a[1].output; })
-    .map(function(entry) {
+  const windowBreakdownEl = document.getElementById('windowBreakdown');
+  const modelEntries = Object.entries(models).sort(function(a, b) { return b[1].output - a[1].output; });
+  if (!modelEntries.length) {
+    setEmptyState(windowBreakdownEl, 'No data');
+  } else {
+    windowBreakdownEl.innerHTML = '';
+    modelEntries.forEach(function(entry) {
       var model = entry[0], data = entry[1];
       var shortModel = model.split('/').pop();
       var calc = (usage.fiveHour && usage.fiveHour.perModelCost && usage.fiveHour.perModelCost[model]) || {};
@@ -2203,39 +2220,36 @@ function updateLimits() {
       var cacheWriteCost = calc.cacheWriteCost || 0;
       var totalModelCost = calc.totalCost || (inputCost + outputCost + cacheReadCost + cacheWriteCost);
       var cacheCost = cacheReadCost + cacheWriteCost;
-      return '<div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);">' +
-          '<div style="display:flex;justify-content:space-between;margin-bottom:6px;">' +
-            '<span class="mono" style="font-size:14px;font-weight:600;">' + shortModel + '</span>' +
-            '<span class="mono" style="font-size:14px;font-weight:600;color:var(--accent);">$' + totalModelCost.toFixed(4) + '</span>' +
-          '</div>' +
-          '<div style="display:flex;gap:16px;font-size:11px;color:var(--text-muted);font-family:\'JetBrains Mono\',monospace;">' +
-            '<span>' + data.calls + ' calls</span>' +
-            '<span>' + (data.input/1000).toFixed(0) + 'k in ($' + inputCost.toFixed(4) + ')</span>' +
-            '<span>' + (data.output/1000).toFixed(0) + 'k out ($' + outputCost.toFixed(4) + ')</span>' +
-            (cacheCost > 0 ? '<span>cache ($' + cacheCost.toFixed(4) + ')</span>' : '') +
-          '</div>' +
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);';
+      wrap.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:6px;">' +
+        '<span class="mono" style="font-size:14px;font-weight:600;">' + escapeHtml(shortModel) + '</span>' +
+        '<span class="mono" style="font-size:14px;font-weight:600;color:var(--accent);">$' + totalModelCost.toFixed(4) + '</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:16px;font-size:11px;color:var(--text-muted);font-family:\'JetBrains Mono\',monospace;">' +
+        '<span>' + data.calls + ' calls</span>' +
+        '<span>' + (data.input/1000).toFixed(0) + 'k in ($' + inputCost.toFixed(4) + ')</span>' +
+        '<span>' + (data.output/1000).toFixed(0) + 'k out ($' + outputCost.toFixed(4) + ')</span>' +
+        (cacheCost > 0 ? '<span>cache ($' + cacheCost.toFixed(4) + ')</span>' : '') +
         '</div>';
-    }).join('');
-
-  document.getElementById('windowBreakdown').innerHTML = windowHtml || '<div class="empty-state-text">No data</div>';
+      windowBreakdownEl.appendChild(wrap);
+    });
+  }
 
   const recentCalls = (usage.fiveHour && usage.fiveHour.recentCalls) || [];
-  const callsHtml = recentCalls.slice(0, 15).map(call => {
-    const shortModel = call.model.split('/').pop();
-    return `
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;">
-        <div>
-          <div class="mono" style="font-weight:600;">${escapeHtml(shortModel)}</div>
-          <div style="color:var(--text-muted);font-size:11px;">${escapeHtml(call.ago)}</div>
-        </div>
-        <div style="text-align:right;">
-          <div class="mono">${call.output.toLocaleString()} out</div>
-          <div style="color:var(--text-muted);font-size:11px;">$${call.cost.toFixed(4)}</div>
-        </div>
-      </div>`;
-  }).join('');
-
-  document.getElementById('recentCalls').innerHTML = callsHtml || '<div class="empty-state-text">No recent calls</div>';
+  const recentCallsEl = document.getElementById('recentCalls');
+  if (!recentCalls.length) {
+    setEmptyState(recentCallsEl, 'No recent calls');
+  } else {
+    recentCallsEl.innerHTML = '';
+    recentCalls.slice(0, 15).forEach(call => {
+      const shortModel = call.model.split('/').pop();
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;';
+      row.innerHTML = `<div><div class="mono" style="font-weight:600;">${escapeHtml(shortModel)}</div><div style="color:var(--text-muted);font-size:11px;">${escapeHtml(call.ago)}</div></div><div style="text-align:right;"><div class="mono">${call.output.toLocaleString()} out</div><div style="color:var(--text-muted);font-size:11px;">$${call.cost.toFixed(4)}</div></div>`;
+      recentCallsEl.appendChild(row);
+    });
+  }
   
   // Model usage donut chart
   try {
@@ -2254,54 +2268,75 @@ function updateLimits() {
       }).filter(d => d.cost > 0).sort((a, b) => b.cost - a.cost);
       
       if (modelData.length === 0) {
-        donutEl.innerHTML = '<div style="color:var(--text-muted);">No data</div>';
+        setEmptyState(donutEl, 'No data');
       } else {
         const total = modelData.reduce((s, d) => s + d.cost, 0);
         const size = 200, r = 70, strokeW = 40;
-        
-        // Handle single model at ~100% - draw full circle instead of degenerate arc
-        const arcs = modelData.map(d => {
-          const pct = d.cost / total;
-          if (pct >= 0.999) {
-            // Full circle for 100% usage
-            return `<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="${d.color}" opacity="0.8" style="cursor:pointer;"><title>${d.model}: 100%</title></circle>`;
-          }
-          return '';
-        }).join('');
-        
-        // Multi-segment arcs if needed
+        donutEl.innerHTML = '';
+
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex;gap:32px;align-items:center;';
+        const svgNs = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNs, 'svg');
+        svg.setAttribute('width', String(size));
+        svg.setAttribute('height', String(size));
+        svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+
+        const bgCircle = document.createElementNS(svgNs, 'circle');
+        bgCircle.setAttribute('cx', String(size / 2));
+        bgCircle.setAttribute('cy', String(size / 2));
+        bgCircle.setAttribute('r', String(r));
+        bgCircle.setAttribute('fill', 'var(--bg-primary)');
+        svg.appendChild(bgCircle);
+
         let currentAngle = 0;
-        const multiArcs = modelData.map(d => {
+        modelData.forEach(d => {
           const pct = d.cost / total;
-          if (pct >= 0.999) return '';
-          const angle = pct * 360;
-          const largeArc = angle > 180 ? 1 : 0;
-          const startX = size / 2 + r * Math.cos((currentAngle - 90) * Math.PI / 180);
-          const startY = size / 2 + r * Math.sin((currentAngle - 90) * Math.PI / 180);
-          const endX = size / 2 + r * Math.cos((currentAngle + angle - 90) * Math.PI / 180);
-          const endY = size / 2 + r * Math.sin((currentAngle + angle - 90) * Math.PI / 180);
-          currentAngle += angle;
-          
-          return `<path d="M ${size/2},${size/2} L ${startX},${startY} A ${r},${r} 0 ${largeArc},1 ${endX},${endY} Z" fill="${d.color}" opacity="0.8" style="cursor:pointer;"><title>${d.model}: ${(pct*100).toFixed(1)}%</title></path>`;
-        }).join('');
-        
-        const legend = modelData.map((d, i) => {
+          let shape;
+          if (pct >= 0.999) {
+            shape = document.createElementNS(svgNs, 'circle');
+            shape.setAttribute('cx', String(size / 2));
+            shape.setAttribute('cy', String(size / 2));
+            shape.setAttribute('r', String(r));
+            shape.setAttribute('fill', d.color);
+          } else {
+            const angle = pct * 360;
+            const largeArc = angle > 180 ? 1 : 0;
+            const startX = size / 2 + r * Math.cos((currentAngle - 90) * Math.PI / 180);
+            const startY = size / 2 + r * Math.sin((currentAngle - 90) * Math.PI / 180);
+            const endX = size / 2 + r * Math.cos((currentAngle + angle - 90) * Math.PI / 180);
+            const endY = size / 2 + r * Math.sin((currentAngle + angle - 90) * Math.PI / 180);
+            currentAngle += angle;
+            shape = document.createElementNS(svgNs, 'path');
+            shape.setAttribute('d', `M ${size/2},${size/2} L ${startX},${startY} A ${r},${r} 0 ${largeArc},1 ${endX},${endY} Z`);
+            shape.setAttribute('fill', d.color);
+          }
+          shape.setAttribute('opacity', '0.8');
+          const title = document.createElementNS(svgNs, 'title');
+          title.textContent = `${d.model}: ${pct >= 0.999 ? '100' : (pct * 100).toFixed(1)}%`;
+          shape.appendChild(title);
+          svg.appendChild(shape);
+        });
+
+        const innerCircle = document.createElementNS(svgNs, 'circle');
+        innerCircle.setAttribute('cx', String(size / 2));
+        innerCircle.setAttribute('cy', String(size / 2));
+        innerCircle.setAttribute('r', String(r - strokeW / 2));
+        innerCircle.setAttribute('fill', 'var(--bg-card)');
+        svg.appendChild(innerCircle);
+        wrap.appendChild(svg);
+
+        const legend = document.createElement('div');
+        legend.style.flex = '1';
+        modelData.forEach(d => {
           const pct = ((d.cost / total) * 100).toFixed(1);
-          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-            <div style="width:16px;height:16px;background:${d.color};border-radius:3px;opacity:0.8;"></div>
-            <span style="font-size:13px;flex:1;">${d.model}</span>
-            <span style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;">${pct}%</span>
-          </div>`;
-        }).join('');
-        
-        donutEl.innerHTML = `<div style="display:flex;gap:32px;align-items:center;">
-          <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-            <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="var(--bg-primary)"/>
-            ${arcs}${multiArcs}
-            <circle cx="${size/2}" cy="${size/2}" r="${r - strokeW / 2}" fill="var(--bg-card)"/>
-          </svg>
-          <div style="flex:1;">${legend}</div>
-        </div>`;
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px;';
+          row.innerHTML = `<div style="width:16px;height:16px;background:${d.color};border-radius:3px;opacity:0.8;"></div><span style="font-size:13px;flex:1;">${escapeHtml(d.model)}</span><span style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;">${pct}%</span>`;
+          legend.appendChild(row);
+        });
+        wrap.appendChild(legend);
+        donutEl.appendChild(wrap);
       }
     }
   } catch (e) {
@@ -2388,47 +2423,51 @@ function updateCosts() {
       // Only draw line if more than 1 point
       const lineSvg = count > 1 ? `<polyline points="${points}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>` : '';
       
-      chartEl.innerHTML = `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="max-width:100%;height:auto;">
-        ${yTicks}
-        ${lineSvg}
-        ${dots}
-        ${xLabels}
-      </svg>`;
+      chartEl.innerHTML = '';
+      const svgNs = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(svgNs, 'svg');
+      svg.setAttribute('width', '100%');
+      svg.setAttribute('height', String(h));
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      svg.setAttribute('style', 'max-width:100%;height:auto;');
+      svg.innerHTML = `${yTicks}${lineSvg}${dots}${xLabels}`;
+      chartEl.appendChild(svg);
     }
   } catch (e) {
     console.error('Cost chart error:', e);
   }
   
-  const modelHtml = Object.entries(costs.perModel || {})
-    .sort((a, b) => b[1] - a[1])
-    .map(([model, cost]) => {
-      const shortModel = model.split('/').pop();
-      return `
-        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);">
-          <span class="mono">${escapeHtml(shortModel)}</span>
-          <span class="mono" style="font-weight:700;">$${cost.toFixed(2)}</span>
-        </div>
-      `;
-    }).join('');
-  
   const costByModelEl = document.getElementById('costByModel');
-  if (modelHtml) costByModelEl.innerHTML = modelHtml;
-  else setEmptyState(costByModelEl, 'No data');
-  
-  const topHtml = Object.entries(costs.perSession || {})
+  const perModelEntries = Object.entries(costs.perModel || {}).sort((a, b) => b[1] - a[1]);
+  if (!perModelEntries.length) {
+    setEmptyState(costByModelEl, 'No data');
+  } else {
+    costByModelEl.innerHTML = '';
+    perModelEntries.forEach(([model, cost]) => {
+      const shortModel = model.split('/').pop();
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);';
+      row.innerHTML = `<span class="mono">${escapeHtml(shortModel)}</span><span class="mono" style="font-weight:700;">$${cost.toFixed(2)}</span>`;
+      costByModelEl.appendChild(row);
+    });
+  }
+
+  const topSessionsEl = document.getElementById('topSessions');
+  const perSessionEntries = Object.entries(costs.perSession || {})
     .map(([sid, v]) => [sid, typeof v === 'object' ? v : { cost: v, label: sid.substring(0, 12) }])
     .sort((a, b) => b[1].cost - a[1].cost)
-    .slice(0, 10)
-    .map(([sid, v]) => `
-        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);">
-          <span>${escapeHtml(v.label)}</span>
-          <span class="mono" style="font-weight:700;">$${v.cost.toFixed(2)}</span>
-        </div>
-      `).join('');
-  
-  const topSessionsEl = document.getElementById('topSessions');
-  if (topHtml) topSessionsEl.innerHTML = topHtml;
-  else setEmptyState(topSessionsEl, 'No data');
+    .slice(0, 10);
+  if (!perSessionEntries.length) {
+    setEmptyState(topSessionsEl, 'No data');
+  } else {
+    topSessionsEl.innerHTML = '';
+    perSessionEntries.forEach(([, v]) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);';
+      row.innerHTML = `<span>${escapeHtml(v.label)}</span><span class="mono" style="font-weight:700;">$${v.cost.toFixed(2)}</span>`;
+      topSessionsEl.appendChild(row);
+    });
+  }
 }
 
 function updateStatusBar() {
