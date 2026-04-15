@@ -32,6 +32,10 @@ body {
   padding-bottom: 40px;
 }
 
+.ui-hidden {
+  display: none !important;
+}
+
 .app {
   display: flex;
   min-height: calc(100vh - 40px);
@@ -1006,6 +1010,75 @@ body {
 
 .session-modal-overlay.session-modal-open {
   display: flex;
+}
+
+.reauth-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 600;
+  align-items: center;
+  justify-content: center;
+}
+
+.reauth-overlay.reauth-overlay-open {
+  display: flex;
+}
+
+.reauth-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 380px;
+  width: 90%;
+}
+
+.reauth-title {
+  margin-bottom: 8px;
+}
+
+.reauth-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.reauth-input {
+  margin-bottom: 12px;
+}
+
+.reauth-error {
+  margin-bottom: 12px;
+  margin-top: 0;
+  padding: 8px;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.reauth-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.reauth-action-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reauth-action-btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  color: #fff;
+  border: none;
+}
+
+.reauth-action-btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
 }
 
 .session-modal-panel {
@@ -2807,6 +2880,16 @@ body.light-theme .nav-item:hover { background: rgba(0,0,0,0.06); }
 body.light-theme .nav-item.active { background: rgba(99,102,241,0.12); }
 body.light-theme input, body.light-theme textarea, body.light-theme select { background: #f0f0f5 !important; color: #1a1a1a !important; border-color: #d1d1d6 !important; }
 body.light-theme .session-modal-overlay { background: rgba(0,0,0,0.4); }
+
+.mem-show-more {
+  text-align: center;
+  padding: 10px 0;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+}
+
 body.light-theme .mono { color: #4a4a4f; }
 body.light-theme pre { background: #f0f0f5 !important; color: #1a1a1a; }
 body.light-theme code { background: #e8e8ed; color: #1a1a1a; }

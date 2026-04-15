@@ -3027,7 +3027,8 @@ window.runCronJob = async function(id) {
         const ago = age < 60000 ? 'just now' : age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
         const row = document.createElement('div');
         row.className = 'mem-file-item';
-        row.style.cssText = `display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);${idx >= memLimit ? 'display:none;' : ''}`;
+        if (idx >= memLimit) row.classList.add('ui-hidden');
+        row.style.cssText = 'display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);';
 
         const nameEl = document.createElement('span');
         nameEl.className = 'mono';
@@ -3045,11 +3046,11 @@ window.runCronJob = async function(id) {
       if (memFiles.length > memLimit) {
         const more = document.createElement('div');
         more.id = 'memShowMore';
-        more.style.cssText = 'text-align:center;padding:10px 0;cursor:pointer;color:var(--accent);font-size:13px;font-weight:500;';
+        more.className = 'mem-show-more';
         more.textContent = `Show all (${memFiles.length} files) ↓`;
         more.onclick = function() {
-          document.querySelectorAll('.mem-file-item').forEach(e => e.style.display = 'flex');
-          this.style.display = 'none';
+          document.querySelectorAll('.mem-file-item').forEach(e => e.classList.remove('ui-hidden'));
+          this.classList.add('ui-hidden');
         };
         memoryFilesEl.appendChild(more);
       }
@@ -4235,24 +4236,27 @@ function showReauthModal(targetPage) {
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'reauthOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:600;display:flex;align-items:center;justify-content:center;';
+    overlay.className = 'reauth-overlay';
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) cancelReauth();
+    });
 
     const panel = document.createElement('div');
-    panel.style.cssText = 'background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:380px;width:90%;';
+    panel.className = 'reauth-panel';
 
     const title = document.createElement('h3');
-    title.style.marginBottom = '8px';
+    title.className = 'reauth-title';
     title.textContent = '🔒 Re-authentication Required';
 
     const desc = document.createElement('p');
-    desc.style.cssText = 'font-size:13px;color:var(--text-secondary);margin-bottom:20px;';
+    desc.className = 'reauth-desc';
     desc.textContent = 'Enter your credentials to access System Security.';
 
     const pass = document.createElement('input');
     pass.type = 'password';
     pass.id = 'reauthPass';
     pass.placeholder = 'Password';
-    pass.style.cssText = 'width:100%;padding:12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;margin-bottom:12px;';
+    pass.className = 'form-input reauth-input';
 
     const totp = document.createElement('input');
     totp.type = 'text';
@@ -4260,21 +4264,21 @@ function showReauthModal(targetPage) {
     totp.placeholder = 'Authenticator Code (if enabled)';
     totp.maxLength = 6;
     totp.autocomplete = 'one-time-code';
-    totp.style.cssText = "width:100%;padding:12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;margin-bottom:12px;font-family:JetBrains Mono,monospace;";
+    totp.className = 'form-input form-input-code reauth-input';
 
     const error = document.createElement('div');
     error.id = 'reauthError';
-    error.style.cssText = 'display:none;color:var(--red);font-size:12px;margin-bottom:12px;padding:8px;background:rgba(239,68,68,0.1);border-radius:6px;';
+    error.className = 'form-inline-error auth-form-hidden reauth-error';
 
     const actions = document.createElement('div');
-    actions.style.cssText = 'display:flex;gap:8px;';
+    actions.className = 'reauth-actions';
     const verifyBtn = document.createElement('button');
     verifyBtn.textContent = 'Verify';
-    verifyBtn.style.cssText = 'flex:1;padding:12px;background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;';
+    verifyBtn.className = 'reauth-action-btn reauth-action-btn-primary';
     verifyBtn.onclick = () => submitReauth();
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'Cancel';
-    cancelBtn.style.cssText = 'flex:1;padding:12px;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-weight:500;cursor:pointer;';
+    cancelBtn.className = 'reauth-action-btn reauth-action-btn-secondary';
     cancelBtn.onclick = () => cancelReauth();
     actions.appendChild(verifyBtn);
     actions.appendChild(cancelBtn);
@@ -4291,10 +4295,10 @@ function showReauthModal(targetPage) {
     pass.addEventListener('keydown', e => { if (e.key === 'Enter') totp.focus(); });
     totp.addEventListener('keydown', e => { if (e.key === 'Enter') submitReauth(); });
   }
-  overlay.style.display = 'flex';
+  setOpenState(overlay, true, 'reauth-overlay-open');
   document.getElementById('reauthPass').value = '';
   document.getElementById('reauthTotp').value = '';
-  document.getElementById('reauthError').style.display = 'none';
+  setHiddenState('reauthError', true);
   setTimeout(() => document.getElementById('reauthPass').focus(), 100);
 }
 
@@ -4302,7 +4306,7 @@ async function submitReauth() {
   const pass = document.getElementById('reauthPass').value;
   const totp = document.getElementById('reauthTotp').value;
   const errEl = document.getElementById('reauthError');
-  if (!pass) { errEl.textContent = 'Password required'; errEl.style.display = 'block'; return; }
+  if (!pass) { errEl.textContent = 'Password required'; setHiddenState(errEl, false); return; }
   try {
     const res = await fetch(API_BASE + '/api/reauth', {
       method: 'POST',
@@ -4311,10 +4315,10 @@ async function submitReauth() {
       body: JSON.stringify({ password: pass, totp: totp || undefined })
     });
     const data = await res.json();
-    if (data.needsTotp && !totp) { errEl.textContent = 'Authenticator code required'; errEl.style.display = 'block'; document.getElementById('reauthTotp').focus(); return; }
-    if (data.error) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+    if (data.needsTotp && !totp) { errEl.textContent = 'Authenticator code required'; setHiddenState(errEl, false); document.getElementById('reauthTotp').focus(); return; }
+    if (data.error) { errEl.textContent = data.error; setHiddenState(errEl, false); return; }
     sysSecAuthed = true;
-    document.getElementById('reauthOverlay').style.display = 'none';
+    setOpenState('reauthOverlay', false, 'reauth-overlay-open');
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     document.querySelector('[data-page="' + reauthTargetPage + '"]').classList.add('active');
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -4322,7 +4326,7 @@ async function submitReauth() {
     if (reauthTargetPage === 'sys-security') fetchSysSecurity();
     if (reauthTargetPage === 'config-editor') loadConfig();
 
-  } catch(e) { errEl.textContent = 'Error: ' + e.message; errEl.style.display = 'block'; }
+  } catch(e) { errEl.textContent = 'Error: ' + e.message; setHiddenState(errEl, false); }
 }
 
 async function loadConfig() {
@@ -4383,7 +4387,7 @@ async function saveConfig() {
 }
 
 function cancelReauth() {
-  document.getElementById('reauthOverlay').style.display = 'none';
+  setOpenState('reauthOverlay', false, 'reauth-overlay-open');
   document.querySelector('[data-page="overview"]').click();
 }
 
