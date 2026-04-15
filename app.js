@@ -1794,54 +1794,53 @@ function _setUsageBar(prefix, data) {
   if (reset) reset.textContent = data.detail || (data.resets ? 'Resets ' + data.resets : '');
 }
 
+const PROVIDER_USAGE_CONFIG = {
+  openai: {
+    endpoint: 'openai',
+    cacheKey: '_cachedOpenAIUsage',
+    prefix: 'openaiSession',
+    scrapedAtId: 'openaiUsageScrapedAt',
+    scrapeBtnId: 'openaiScrapeBtn',
+    success: 'ChatGPT usage refreshed',
+    failure: 'Failed to refresh ChatGPT usage'
+  },
+  'opencode-go': {
+    endpoint: 'opencode-go',
+    cacheKey: '_cachedOpenCodeGoUsage',
+    prefix: 'opencodeGoSession',
+    scrapedAtId: 'opencodeGoUsageScrapedAt',
+    scrapeBtnId: 'opencodeGoScrapeBtn',
+    success: 'OpenCode-Go usage refreshed',
+    failure: 'Failed to refresh OpenCode-Go usage'
+  }
+};
+
 let _cachedOpenAIUsage = null;
-async function fetchOpenAIUsage() {
-  try {
-    const r = await authFetch(API_BASE + '/api/openai-usage');
-    const d = await r.json();
-    if (d.error) return;
-    _cachedOpenAIUsage = d;
-    _setUsageBar('openaiSession', d.session);
-    const ts = document.getElementById('openaiUsageScrapedAt');
-    if (ts && d.scraped_at) {
-      const ago = Math.round((Date.now() - new Date(d.scraped_at).getTime()) / 60000);
-      ts.textContent = ago < 1 ? 'Just now' : ago + 'm ago';
-    }
-  } catch {}
-}
-
-async function scrapeOpenAIUsage() {
-  const btn = document.getElementById('openaiScrapeBtn');
-  if (!btn) return;
-  const origText = btn.textContent;
-  btn.textContent = '⏳ Refreshing...';
-  btn.disabled = true;
-  try {
-    await authFetch(API_BASE + '/api/openai-usage-scrape', { method: 'POST' });
-    const oldTs = (_cachedOpenAIUsage && _cachedOpenAIUsage.scraped_at) || '';
-    for (let i = 0; i < 5; i++) {
-      await new Promise(r => setTimeout(r, 1200));
-      await fetchOpenAIUsage();
-      if (_cachedOpenAIUsage && _cachedOpenAIUsage.scraped_at && _cachedOpenAIUsage.scraped_at !== oldTs) break;
-    }
-    showToast('ChatGPT usage refreshed', 'success');
-  } catch(e) {
-    showToast('Failed to refresh ChatGPT usage', 'danger');
-  } finally {
-    btn.textContent = origText;
-    btn.disabled = false;
-  }
-}
-
 let _cachedOpenCodeGoUsage = null;
-async function fetchOpenCodeGoUsage() {
+const PROVIDER_USAGE_CACHE = {
+  openai: () => _cachedOpenAIUsage,
+  'opencode-go': () => _cachedOpenCodeGoUsage
+};
+
+function _getProviderUsageCache(provider) {
+  return PROVIDER_USAGE_CACHE[provider] ? PROVIDER_USAGE_CACHE[provider]() : null;
+}
+
+function _setProviderUsageCache(provider, value) {
+  if (provider === 'openai') _cachedOpenAIUsage = value;
+  else if (provider === 'opencode-go') _cachedOpenCodeGoUsage = value;
+}
+
+async function fetchProviderUsage(provider) {
+  const cfg = PROVIDER_USAGE_CONFIG[provider];
+  if (!cfg) return;
   try {
-    const r = await authFetch(API_BASE + '/api/opencode-go-usage');
+    const r = await authFetch(API_BASE + '/api/' + cfg.endpoint + '-usage');
     const d = await r.json();
     if (d.error) return;
-    _cachedOpenCodeGoUsage = d;
-    _setUsageBar('opencodeGoSession', d.session);
-    const ts = document.getElementById('opencodeGoUsageScrapedAt');
+    _setProviderUsageCache(provider, d);
+    _setUsageBar(cfg.prefix, d.session);
+    const ts = document.getElementById(cfg.scrapedAtId);
     if (ts && d.scraped_at) {
       const ago = Math.round((Date.now() - new Date(d.scraped_at).getTime()) / 60000);
       ts.textContent = ago < 1 ? 'Just now' : ago + 'm ago';
@@ -1849,28 +1848,36 @@ async function fetchOpenCodeGoUsage() {
   } catch {}
 }
 
-async function scrapeOpenCodeGoUsage() {
-  const btn = document.getElementById('opencodeGoScrapeBtn');
+async function scrapeProviderUsage(provider) {
+  const cfg = PROVIDER_USAGE_CONFIG[provider];
+  if (!cfg) return;
+  const btn = document.getElementById(cfg.scrapeBtnId);
   if (!btn) return;
   const origText = btn.textContent;
   btn.textContent = '⏳ Refreshing...';
   btn.disabled = true;
   try {
-    await authFetch(API_BASE + '/api/opencode-go-usage-scrape', { method: 'POST' });
-    const oldTs = (_cachedOpenCodeGoUsage && _cachedOpenCodeGoUsage.scraped_at) || '';
+    await authFetch(API_BASE + '/api/' + cfg.endpoint + '-usage-scrape', { method: 'POST' });
+    const oldTs = ((_getProviderUsageCache(provider) || {}).scraped_at) || '';
     for (let i = 0; i < 5; i++) {
       await new Promise(r => setTimeout(r, 1200));
-      await fetchOpenCodeGoUsage();
-      if (_cachedOpenCodeGoUsage && _cachedOpenCodeGoUsage.scraped_at && _cachedOpenCodeGoUsage.scraped_at !== oldTs) break;
+      await fetchProviderUsage(provider);
+      const current = _getProviderUsageCache(provider);
+      if (current && current.scraped_at && current.scraped_at !== oldTs) break;
     }
-    showToast('OpenCode-Go usage refreshed', 'success');
-  } catch(e) {
-    showToast('Failed to refresh OpenCode-Go usage', 'danger');
+    showToast(cfg.success, 'success');
+  } catch (e) {
+    showToast(cfg.failure, 'danger');
   } finally {
     btn.textContent = origText;
     btn.disabled = false;
   }
 }
+
+async function fetchOpenAIUsage() { return fetchProviderUsage('openai'); }
+async function scrapeOpenAIUsage() { return scrapeProviderUsage('openai'); }
+async function fetchOpenCodeGoUsage() { return fetchProviderUsage('opencode-go'); }
+async function scrapeOpenCodeGoUsage() { return scrapeProviderUsage('opencode-go'); }
 
 async function scrapeClaudeUsage() {
   const btn = document.getElementById('scrapeBtn');
@@ -1945,16 +1952,18 @@ function _populateModelSelect() {
   }
 }
 
-function _setOverviewBar(pct, label) {
+function _setOverviewBar(pct, label, sourceHint) {
   pct = parseFloat(pct) || 0;
   const pctEl = document.getElementById('ovSessionPct');
   const barEl = document.getElementById('overviewSessionBar');
   const labelEl = document.getElementById('overviewUsageLabel');
   const warnEl = document.getElementById('overviewUsageWarn');
+  const sourceEl = document.getElementById('usageSourceHint');
   if (pctEl) pctEl.textContent = pct + '%';
   if (barEl) { barEl.style.width = Math.min(pct, 100) + '%'; barEl.style.background = pct < 50 ? 'var(--green)' : pct < 80 ? '#f59e0b' : '#ef4444'; }
   if (labelEl) labelEl.textContent = String(label || '').replace(/[<>&]/g, '');
   if (warnEl) warnEl.style.display = pct >= 80 ? '' : 'none';
+  if (sourceEl) sourceEl.textContent = sourceHint || 'Source: provider/local';
 }
 
 function updateOverviewClaude() {
@@ -1963,21 +1972,21 @@ function updateOverviewClaude() {
   const keyMap = { session: 'session', weekly_all: 'weekly_all', weekly_sonnet: 'weekly_sonnet' };
   const d = _cachedClaudeUsage[keyMap[_currentModel] || 'session'];
   if (!d) return;
-  _setOverviewBar(d.percent, d.resets ? 'Resets ' + d.resets : '');
+  _setOverviewBar(d.percent, d.resets ? 'Resets ' + d.resets : '', 'Source: provider API');
 }
 
 function updateOverviewOpenAI() {
   _populateModelSelect();
   if (!_cachedOpenAIUsage || !_cachedOpenAIUsage.session) return;
   const d = _cachedOpenAIUsage.session;
-  _setOverviewBar(d.percent, d.label || d.detail || '');
+  _setOverviewBar(d.percent, d.label || d.detail || '', 'Source: local sessions');
 }
 
 function updateOverviewOpenCodeGo() {
   _populateModelSelect();
   if (!_cachedOpenCodeGoUsage || !_cachedOpenCodeGoUsage.session) return;
   const d = _cachedOpenCodeGoUsage.session;
-  _setOverviewBar(d.percent, d.label || d.detail || '');
+  _setOverviewBar(d.percent, d.label || d.detail || '', 'Source: local sessions');
 }
 
 function switchModel(val) {

@@ -77,7 +77,7 @@ function getSessionCost(sessDir, sessionId, MODEL_PRICING) {
           try {
             const d = JSON.parse(line);
             if (d.type !== 'message') continue;
-            const c = estimateMsgCost(d.message || {}, MODEL_PRICING);
+            const c = estimateMsgCost(d.message || {});
             if (c > 0) total += c;
           } catch {}
         }
@@ -162,7 +162,7 @@ async function getCostData(sessDir, cronFile, MODEL_PRICING) {
           if (d.type !== 'message') continue;
           const msg = d.message;
           if (!msg || !msg.usage) continue;
-          const c = estimateMsgCost(msg, MODEL_PRICING);
+          const c = estimateMsgCost(msg);
           if (c <= 0) continue;
           const provider = normalizeProvider(msg.provider);
           const model = normalizeModel(provider, msg.model);
@@ -319,7 +319,7 @@ function getUsageWindows(sessDir, MODEL_PRICING) {
           const outTok = Math.max(0, toNum(msg.usage.output));
           const cacheReadTok = Math.max(0, toNum(msg.usage.cacheRead));
           const cacheWriteTok = Math.max(0, toNum(msg.usage.cacheWrite));
-          const cost = estimateMsgCost(msg, MODEL_PRICING);
+          const cost = estimateMsgCost(msg);
 
           if (now - ts < fiveHoursMs) {
             if (!perModel5h[modelKey]) perModel5h[modelKey] = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, calls: 0 };
@@ -523,7 +523,7 @@ function getLifetimeStats(sessDir, MODEL_PRICING) {
           const inTok = (msg.usage.input || 0) + (msg.usage.cacheRead || 0) + (msg.usage.cacheWrite || 0);
           const outTok = msg.usage.output || 0;
           totalTokens += inTok + outTok;
-          totalCost += estimateMsgCost(msg, MODEL_PRICING);
+          totalCost += estimateMsgCost(msg);
         }
         if (d.timestamp) {
           const ts = new Date(d.timestamp).getTime();

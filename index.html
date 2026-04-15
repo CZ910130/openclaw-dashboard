@@ -197,7 +197,7 @@
                 <span style="font-size:10px;color:var(--text-muted);" id="usageAutoLabel">Auto</span>
               </div>
               <div style="display:flex;background:var(--bg-primary);border-radius:6px;overflow:hidden;border:1px solid var(--border);margin-left:4px;">
-                <button onclick="switchProvider('claude')" id="provBtnClaude" style="padding:2px 10px;font-size:10px;font-weight:600;border:none;cursor:pointer;transition:0.2s;background:var(--accent);color:#fff;">Claude</button>
+                <button onclick="switchProvider('claude')" id="provBtnClaude" style="padding:2px 10px;font-size:10px;font-weight:600;border:none;cursor:pointer;transition:0.2s;background:var(--accent);color:#fff;">Claude API</button>
                 <button onclick="switchProvider('openai')" id="provBtnOpenAI" style="padding:2px 10px;font-size:10px;font-weight:600;border:none;cursor:pointer;transition:0.2s;background:transparent;color:var(--text-muted);">ChatGPT</button>
                 <button onclick="switchProvider('opencode-go')" id="provBtnOpenCodeGo" style="padding:2px 10px;font-size:10px;font-weight:600;border:none;cursor:pointer;transition:0.2s;background:transparent;color:var(--text-muted);">OpenCode-Go</button>
               </div>
@@ -209,7 +209,7 @@
             <div style="height:8px;background:var(--bg-primary);border-radius:4px;overflow:hidden;margin-top:8px;">
               <div id="overviewSessionBar" style="height:100%;border-radius:4px;width:0%;background:var(--green);transition:width 0.6s cubic-bezier(0.4,0,0.2,1);"></div>
             </div>
-            <div class="metric-subtitle" style="margin-top:6px;">Avg response: <span id="avgResponseTime">--</span></div>
+            <div class="metric-subtitle" style="margin-top:6px;"><span id="usageSourceHint">Source: provider/local</span> · Avg response: <span id="avgResponseTime">--</span></div>
           </div>
         </div>
       </div>
@@ -625,7 +625,7 @@
 
       <div class="card mb-24">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <h3 class="card-title" style="margin:0;">OpenCode-Go Usage</h3>
+          <h3 class="card-title" style="margin:0;">OpenCode-Go Usage (Local Sessions)</h3>
           <div style="display:flex;align-items:center;gap:12px;">
             <span style="font-size:11px;color:var(--text-muted);" id="opencodeGoUsageScrapedAt">Not scraped yet</span>
             <button onclick="scrapeOpenCodeGoUsage()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);cursor:pointer;font-size:12px;" id="opencodeGoScrapeBtn">⟳ Refresh</button>

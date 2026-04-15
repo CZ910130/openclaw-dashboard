@@ -31,6 +31,7 @@ RATES = {
     ('minimax', 'MiniMax-M2.7'): {'input': 0.3, 'output': 1.0, 'cache_read': 0.0},
     ('minimax', 'MiniMax-M2.5'): {'input': 0.3, 'output': 1.0, 'cache_read': 0.0},
     ('minimax', 'MiniMax-M2.1'): {'input': 0.3, 'output': 1.0, 'cache_read': 0.0},
+    ('opencode-go', 'mimo-v2-pro'): {'input': 1.0, 'output': 3.0, 'cache_read': 0.2},
 }
 
 
@@ -190,6 +191,7 @@ def parse_sessions():
             'share_percent': percent,
             'top_model': top_model,
         },
+        'source': 'local_sessions',
         'note': 'Derived from local OpenClaw session logs and explicit message usage when available.'
     }
 
