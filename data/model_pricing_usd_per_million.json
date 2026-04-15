@@ -1,0 +1,23 @@
+{
+  "rates_usd_per_million": {
+    "anthropic/claude-opus-4-6": { "input": 15, "output": 75, "cacheRead": 1.875, "cacheWrite": 18.75 },
+    "anthropic/claude-opus-4-5": { "input": 15, "output": 75, "cacheRead": 1.875, "cacheWrite": 18.75 },
+    "anthropic/claude-sonnet-4-6": { "input": 3, "output": 15, "cacheRead": 0.3, "cacheWrite": 3.75 },
+    "anthropic/claude-sonnet-4-5": { "input": 3, "output": 15, "cacheRead": 0.3, "cacheWrite": 3.75 },
+    "anthropic/claude-3-5-haiku-latest": { "input": 0.8, "output": 4, "cacheRead": 0.08, "cacheWrite": 1 },
+    "openai/gpt-4o-mini": { "input": 0.15, "output": 0.6, "cacheRead": 0.075, "cacheWrite": 0.3 },
+    "openai/gpt-4.1-mini": { "input": 0.4, "output": 1.6, "cacheRead": 0.2, "cacheWrite": 0.8 },
+    "openai-codex/gpt-5.4": { "input": 2.5, "output": 15, "cacheRead": 0.25, "cacheWrite": 0 },
+    "google/gemini-3-pro-preview": { "input": 1.25, "output": 10, "cacheRead": 0.31, "cacheWrite": 4.5 },
+    "google/gemini-3-flash-preview": { "input": 0.15, "output": 0.6, "cacheRead": 0.04, "cacheWrite": 0.15 },
+    "xai/grok-4-1-fast": { "input": 0.2, "output": 0.5, "cacheRead": 0.05, "cacheWrite": 0.2 },
+    "zai/glm-5": { "input": 0.5, "output": 0.5, "cacheRead": 0, "cacheWrite": 0 },
+    "zai/glm-4.7": { "input": 0.5, "output": 0.5, "cacheRead": 0, "cacheWrite": 0 },
+    "kimi-coding/k2p5": { "input": 2, "output": 10, "cacheRead": 0, "cacheWrite": 0 },
+    "nvidia/kimi-k2.5": { "input": 2, "output": 10, "cacheRead": 0, "cacheWrite": 0 },
+    "minimax/MiniMax-M2.5": { "input": 0.3, "output": 1, "cacheRead": 0, "cacheWrite": 0 },
+    "minimax/MiniMax-M2.1": { "input": 0.3, "output": 1, "cacheRead": 0, "cacheWrite": 0 },
+    "minimax/MiniMax-M2.7": { "input": 0.3, "output": 1, "cacheRead": 0, "cacheWrite": 0 },
+    "opencode-go/mimo-v2-pro": { "input": 1, "output": 3, "cacheRead": 0.2, "cacheWrite": 0 }
+  }
+}

@@ -5,41 +5,34 @@ const { sendJson } = require('../lib/utils');
 
 function setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir) {
   const providers = {
-    'claude': {
+    claude: {
       file: path.join(dataDir, 'claude-usage.json'),
       script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-claude-usage.sh')
     },
-    'gemini': {
+    gemini: {
       file: path.join(dataDir, 'gemini-usage.json'),
       script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-gemini-usage.sh')
     },
-    'openai': {
+    openai: {
       file: path.join(dataDir, 'openai-usage.json'),
       script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-openai-usage.sh')
-    },
-    'minimax': {
-      file: path.join(dataDir, 'opencode-go-usage.json'),
-      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-opencode-go-usage.sh')
     },
     'opencode-go': {
       file: path.join(dataDir, 'opencode-go-usage.json'),
       script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-opencode-go-usage.sh')
-    },
-    // Backward-compat aliases for older dashboard clients
-    'glm': {
-      file: path.join(dataDir, 'openai-usage.json'),
-      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-openai-usage.sh')
-    },
-    'kimi': {
-      file: path.join(dataDir, 'opencode-go-usage.json'),
-      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-opencode-go-usage.sh')
     }
   };
+  const providerAliases = {
+    minimax: 'opencode-go',
+    kimi: 'opencode-go',
+    glm: 'openai'
+  };
+  const resolveProvider = (provider) => providerAliases[provider] || provider;
 
   // Handle /api/usage/:provider
   const usageMatch = req.url.match(/^\/api\/usage\/([a-z0-9-]+)$/);
   if (usageMatch && req.method === 'GET') {
-    const provider = usageMatch[1];
+    const provider = resolveProvider(usageMatch[1]);
     const config = providers[provider];
     if (!config) return false;
 
@@ -55,7 +48,7 @@ function setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir) {
   // Handle /api/usage/scrape/:provider
   const scrapeMatch = req.url.match(/^\/api\/usage\/scrape\/([a-z0-9-]+)$/);
   if (scrapeMatch && req.method === 'POST') {
-    const provider = scrapeMatch[1];
+    const provider = resolveProvider(scrapeMatch[1]);
     const config = providers[provider];
     if (!config) return false;
 
@@ -79,7 +72,7 @@ function setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir) {
     '/api/kimi-usage': 'kimi'
   };
   if (legacyMap[req.url] && req.method === 'GET') {
-    const provider = legacyMap[req.url];
+    const provider = resolveProvider(legacyMap[req.url]);
     const config = providers[provider];
     try {
       const data = JSON.parse(fs.readFileSync(config.file, 'utf8'));
@@ -100,7 +93,7 @@ function setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir) {
     '/api/kimi-usage-scrape': 'kimi'
   };
   if (legacyScrapeMap[req.url] && req.method === 'POST') {
-    const provider = legacyScrapeMap[req.url];
+    const provider = resolveProvider(legacyScrapeMap[req.url]);
     const config = providers[provider];
     if (fs.existsSync(config.script)) {
       execFile('bash', [config.script], { timeout: 60000 }, (err) => {});
