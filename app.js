@@ -46,6 +46,15 @@ function escapeJsString(value) {
     .replace(/\r/g, '\\r');
 }
 
+function setEmptyState(el, text, icon) {
+  if (!el) return;
+  if (icon) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${icon}</div><div class="empty-state-text">${escapeHtml(text)}</div></div>`;
+  } else {
+    el.innerHTML = `<div class="empty-state-text">${escapeHtml(text)}</div>`;
+  }
+}
+
 // Page Visibility API: pause polling when tab is hidden, resume when visible
 const _visibleIntervals = [];
 function visibleInterval(fn, ms) {
@@ -1378,7 +1387,7 @@ function updateOverview() {
                    dur > 60000 ? Math.floor(dur / 60000) + 'm' : '';
     
     return `
-      <div class="activity-item type-${typeClass} ${isActive ? 'running' : ''}" onclick="openSessionDetail('${s.key}')">
+      <div class="activity-item type-${typeClass} ${isActive ? 'running' : ''}" onclick="openSessionDetail('${escapeJsString(s.key)}')">
         <div class="activity-dot ${isActive ? 'running' : ''}"></div>
         <div class="activity-content">
           <div class="activity-header">
@@ -1397,8 +1406,9 @@ function updateOverview() {
     `;
   }).join('');
   
-  document.getElementById('recentActivity').innerHTML = activityHtml || 
-    '<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">No recent activity</div></div>';
+  const recentActivityEl = document.getElementById('recentActivity');
+  if (activityHtml) recentActivityEl.innerHTML = activityHtml;
+  else setEmptyState(recentActivityEl, 'No recent activity', '📭');
   
   const perDay = costs.perDay || {};
   const days = Object.keys(perDay).sort().slice(-7);
@@ -1420,8 +1430,9 @@ function updateOverview() {
     `;
   }).join('');
   
-  document.getElementById('dailySpendChart').innerHTML = chartHtml || 
-    '<div class="empty-state-text">No data</div>';
+  const dailySpendChartEl = document.getElementById('dailySpendChart');
+  if (chartHtml) dailySpendChartEl.innerHTML = chartHtml;
+  else setEmptyState(dailySpendChartEl, 'No data');
   
   // Add spend summary below chart
   const summaryEl = document.getElementById('dailySpendSummary');
@@ -1676,7 +1687,7 @@ function toggleSessionExpand(key, e) {
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
       <span style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;">Recent Messages</span>
-      <button onclick="openSessionDetail('${s.key}')" style="background:var(--accent);color:white;border:none;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">Full View</button>
+      <button onclick="openSessionDetail('${escapeJsString(s.key)}')" style="background:var(--accent);color:white;border:none;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">Full View</button>
     </div>
     <div id="expanded-msgs-${CSS.escape(key)}" style="font-size:12px;color:var(--text-muted);">Loading...</div>`;
   row.after(detail);
@@ -2331,14 +2342,15 @@ function updateCosts() {
       const shortModel = model.split('/').pop();
       return `
         <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);">
-          <span class="mono">${shortModel}</span>
+          <span class="mono">${escapeHtml(shortModel)}</span>
           <span class="mono" style="font-weight:700;">$${cost.toFixed(2)}</span>
         </div>
       `;
     }).join('');
   
-  document.getElementById('costByModel').innerHTML = modelHtml || 
-    '<div class="empty-state-text">No data</div>';
+  const costByModelEl = document.getElementById('costByModel');
+  if (modelHtml) costByModelEl.innerHTML = modelHtml;
+  else setEmptyState(costByModelEl, 'No data');
   
   const topHtml = Object.entries(costs.perSession || {})
     .map(([sid, v]) => [sid, typeof v === 'object' ? v : { cost: v, label: sid.substring(0, 12) }])
@@ -2346,13 +2358,14 @@ function updateCosts() {
     .slice(0, 10)
     .map(([sid, v]) => `
         <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);">
-          <span>${v.label}</span>
+          <span>${escapeHtml(v.label)}</span>
           <span class="mono" style="font-weight:700;">$${v.cost.toFixed(2)}</span>
         </div>
       `).join('');
   
-  document.getElementById('topSessions').innerHTML = topHtml || 
-    '<div class="empty-state-text">No data</div>';
+  const topSessionsEl = document.getElementById('topSessions');
+  if (topHtml) topSessionsEl.innerHTML = topHtml;
+  else setEmptyState(topSessionsEl, 'No data');
 }
 
 function updateStatusBar() {
@@ -2592,35 +2605,51 @@ async function fetchNewData() {
     const tokens = await tokRes.json();
     const rt = await rtRes.json();
 
-    document.getElementById('servicesStatus').innerHTML = services.map((s, i) => {
-      const isLast = i === services.length - 1;
-      const border = isLast ? 'none' : '1px solid var(--border)';
-      const status = s.active === null ? 'N/A' : (s.active ? 'Running' : 'Stopped');
-      const dotColor = s.active === null ? 'var(--text-muted)' : (s.active ? 'var(--green)' : 'var(--red)');
-      const textColor = s.active === null ? 'var(--text-muted)' : (s.active ? 'var(--green)' : 'var(--red)');
-      return `<div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:${border};">
-        <span style="width:10px;height:10px;border-radius:50%;background:${dotColor};flex-shrink:0;"></span>
-        <span style="font-weight:600;font-size:14px;">${escapeHtml(s.name)}</span>
-        <span style="margin-left:auto;font-size:12px;color:${textColor};">${escapeHtml(status)}</span>
-      </div>`;
-    }).join('') || '<div class="empty-state-text">No services</div>';
+    const servicesStatusEl = document.getElementById('servicesStatus');
+    if (!services.length) {
+      setEmptyState(servicesStatusEl, 'No services');
+    } else {
+      servicesStatusEl.innerHTML = '';
+      services.forEach((s, i) => {
+        const isLast = i === services.length - 1;
+        const status = s.active === null ? 'N/A' : (s.active ? 'Running' : 'Stopped');
+        const dotColor = s.active === null ? 'var(--text-muted)' : (s.active ? 'var(--green)' : 'var(--red)');
+        const textColor = s.active === null ? 'var(--text-muted)' : (s.active ? 'var(--green)' : 'var(--red)');
+        const row = document.createElement('div');
+        row.style.cssText = `display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:${isLast ? 'none' : '1px solid var(--border)'};`;
+        row.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${dotColor};flex-shrink:0;"></span><span style="font-weight:600;font-size:14px;">${escapeHtml(s.name)}</span><span style="margin-left:auto;font-size:12px;color:${textColor};">${escapeHtml(status)}</span>`;
+        servicesStatusEl.appendChild(row);
+      });
+    }
 
     const now = Date.now();
-    document.getElementById('cronJobs').innerHTML = crons.map(c => {
-      const statusIcon = c.lastStatus === 'ok' ? '✅' : c.lastStatus === 'unknown' ? '⚪' : '❌';
-      const nextAgo = c.nextRunAt > now ? formatTimeAgo(c.nextRunAt - now, true) : '--';
-      const toggleColor = c.enabled ? 'var(--green)' : 'var(--text-muted)';
-      const toggleBg = c.enabled ? 'rgba(16,185,129,0.2)' : 'var(--bg-tertiary)';
-      return `<div style="padding:10px 0;border-bottom:1px solid var(--border);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <span style="font-weight:600;font-size:13px;flex:1;">${statusIcon} ${escapeHtml(c.name)}</span>
-          <button onclick="window.toggleCronJob('${escapeJsString(c.id)}')" style="padding:2px 8px;background:${toggleBg};color:${toggleColor};border:1px solid var(--border);border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;margin-right:4px;">${c.enabled ? 'ON' : 'OFF'}</button>
-          <button onclick="window.runCronJob('${escapeJsString(c.id)}')" style="padding:2px 8px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;">▶</button>
-        </div>
-        <span class="mono" style="font-size:11px;color:var(--text-muted);">${escapeHtml(c.schedule)}</span>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Next: ${escapeHtml(c.enabled ? nextAgo : 'disabled')} · Last: ${c.lastDuration ? (c.lastDuration / 1000).toFixed(0) + 's' : '--'}</div>
-      </div>`;
-    }).join('') || '<div class="empty-state-text">No cron jobs</div>';
+    const cronJobsEl = document.getElementById('cronJobs');
+    if (!crons.length) {
+      setEmptyState(cronJobsEl, 'No cron jobs');
+    } else {
+      cronJobsEl.innerHTML = '';
+      crons.forEach(c => {
+        const statusIcon = c.lastStatus === 'ok' ? '✅' : c.lastStatus === 'unknown' ? '⚪' : '❌';
+        const nextAgo = c.nextRunAt > now ? formatTimeAgo(c.nextRunAt - now, true) : '--';
+        const toggleColor = c.enabled ? 'var(--green)' : 'var(--text-muted)';
+        const toggleBg = c.enabled ? 'rgba(16,185,129,0.2)' : 'var(--bg-tertiary)';
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:10px 0;border-bottom:1px solid var(--border);';
+        row.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span style="font-weight:600;font-size:13px;flex:1;">${statusIcon} ${escapeHtml(c.name)}</span></div><span class="mono" style="font-size:11px;color:var(--text-muted);">${escapeHtml(c.schedule)}</span><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Next: ${escapeHtml(c.enabled ? nextAgo : 'disabled')} · Last: ${c.lastDuration ? (c.lastDuration / 1000).toFixed(0) + 's' : '--'}</div>`;
+        const header = row.firstElementChild;
+        const toggleBtn = document.createElement('button');
+        toggleBtn.textContent = c.enabled ? 'ON' : 'OFF';
+        toggleBtn.style.cssText = `padding:2px 8px;background:${toggleBg};color:${toggleColor};border:1px solid var(--border);border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;margin-right:4px;`;
+        toggleBtn.onclick = () => window.toggleCronJob(c.id);
+        const runBtn = document.createElement('button');
+        runBtn.textContent = '▶';
+        runBtn.style.cssText = 'padding:2px 8px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;';
+        runBtn.onclick = () => window.runCronJob(c.id);
+        header.appendChild(toggleBtn);
+        header.appendChild(runBtn);
+        cronJobsEl.appendChild(row);
+      });
+    }
 
 // Cron management
 window.toggleCronJob = async function(id) {
@@ -3793,14 +3822,21 @@ async function fetchNotifications() {
     const res = await authFetch(API_BASE + '/api/notifications?limit=50');
     const data = await res.json();
     const body = document.getElementById('notifPanelBody');
-    if (!data.events || !data.events.length) { body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);">No events yet</div>'; return; }
-    body.innerHTML = data.events.map(e => {
+    if (!data.events || !data.events.length) {
+      body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);">No events yet</div>';
+      return;
+    }
+    body.innerHTML = '';
+    data.events.forEach(e => {
       const icon = notifIcons[e.event] || '📋';
       const time = e.timestamp ? new Date(e.timestamp).toLocaleString() : '';
       const detail = e.username ? ' (' + e.username + ')' : '';
       const ip = e.ip ? ' from ' + e.ip : '';
-      return '<div class="notif-item"><div class="notif-icon">' + icon + '</div><div class="notif-content"><div class="notif-event">' + escapeHtml((notifLabels[e.event] || (e.event||'').replace(/_/g, ' ')) + detail + ip) + '</div><div class="notif-time">' + escapeHtml(time) + '</div></div></div>';
-    }).join('');
+      const item = document.createElement('div');
+      item.className = 'notif-item';
+      item.innerHTML = `<div class="notif-icon">${icon}</div><div class="notif-content"><div class="notif-event">${escapeHtml((notifLabels[e.event] || (e.event||'').replace(/_/g, ' ')) + detail + ip)}</div><div class="notif-time">${escapeHtml(time)}</div></div>`;
+      body.appendChild(item);
+    });
     if (data.events.length) {
       notifLastSeen = data.events[0].timestamp;
       localStorage.setItem('notifLastSeen', notifLastSeen);
