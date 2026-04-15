@@ -190,35 +190,32 @@ function formatTimeAgo(ms, future) {
   return (future ? 'in ' : '') + Math.round(ms/86400000) + 'd';
 }
 
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
+function handleGlobalShortcutKeydown(e) {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
-  
+
   const pages = ['overview', 'sessions', 'costs', 'limits', 'feed'];
   if (e.key >= '1' && e.key <= '5') {
     const idx = parseInt(e.key) - 1;
-    if (pages[idx]) {
-      document.querySelector(`[data-page="${pages[idx]}"]`).click();
-    }
-  } else if (e.key === ' ' && document.querySelector('.page.active').id === 'feed') {
+    if (pages[idx]) activatePage(pages[idx]);
+  } else if (e.key === ' ' && document.querySelector('.page.active')?.id === 'feed') {
     e.preventDefault();
-    document.getElementById('pauseBtn').click();
+    toggleFeedPause();
   } else if (e.key === 'Escape') {
     closeSessionModal();
     toggleShortcuts(false);
   } else if (e.key === '/') {
     e.preventDefault();
-    const activePage = document.querySelector('.page.active').id;
+    const activePage = document.querySelector('.page.active')?.id;
     if (activePage === 'sessions') {
-      document.getElementById('sessionSearch').focus();
+      document.getElementById('sessionSearch')?.focus();
     } else if (activePage === 'feed') {
-      document.getElementById('feedSearchInput').focus();
+      document.getElementById('feedSearchInput')?.focus();
     }
   } else if (e.key === '?') {
     e.preventDefault();
     toggleShortcuts();
   }
-});
+}
 
 function toggleShortcuts(force) {
   const overlay = document.getElementById('shortcutsOverlay');
@@ -244,9 +241,10 @@ function sendNotification(title, body) {
 
 // Feed search
 let feedSearchTerm = '';
-{
+function bindFeedSearchInput() {
   const feedSearchInputEl = document.getElementById('feedSearchInput');
-  if (feedSearchInputEl) {
+  if (feedSearchInputEl && feedSearchInputEl.dataset.boundFeedSearch !== 'true') {
+    feedSearchInputEl.dataset.boundFeedSearch = 'true';
     feedSearchInputEl.addEventListener('input', (e) => {
       feedSearchTerm = e.target.value.toLowerCase();
       applyFeedFilter();
@@ -386,9 +384,6 @@ function renderDiskSparkline(history) {
   el.innerHTML = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polyline points="${points}" fill="none" stroke="var(--purple)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
-const origUpdateOverview = updateOverview;
-const _origUpdateOverview = updateOverview;
-
 function openSessionDetail(key) {
   const s = sessions.find(x => x.key === key);
   if (!s) return;
@@ -429,7 +424,6 @@ function openSessionDetail(key) {
     });
 }
 function closeSessionModal() { setOpenState('sessionModal', false, SESSION_MODAL_OPEN_CLASS); }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSessionModal(); });
 
 // Toast notifications
 function showToast(message, type = 'info', duration = 4000) {
@@ -890,19 +884,21 @@ toggleSessionExpand = function(key, e) {
   } catch {}
 };
 
-// Fetch new data on load
-fetchTailscaleStatus();
-fetchLifetimeStats();
-
-// Periodic updates (paused when tab is hidden)
-visibleInterval(fetchTailscaleStatus, 30000);
-visibleInterval(fetchLifetimeStats, 60000);
-visibleInterval(updatePageTitle, 5000);
-visibleInterval(() => { if (costs.perDay) calculateStreak(); }, 10000);
-
-// Initial calls
-setTimeout(() => {
-  if (costs.perDay) calculateStreak();
-  updatePageTitle();
-}, 2000);
+function initMiscUi() {
+  if (!document.body.dataset.boundMiscUi) {
+    document.body.dataset.boundMiscUi = 'true';
+    document.addEventListener('keydown', handleGlobalShortcutKeydown);
+  }
+  bindFeedSearchInput();
+  fetchTailscaleStatus();
+  fetchLifetimeStats();
+  visibleInterval(fetchTailscaleStatus, 30000);
+  visibleInterval(fetchLifetimeStats, 60000);
+  visibleInterval(updatePageTitle, 5000);
+  visibleInterval(() => { if (costs.perDay) calculateStreak(); }, 10000);
+  setTimeout(() => {
+    if (costs.perDay) calculateStreak();
+    updatePageTitle();
+  }, 2000);
+}
 

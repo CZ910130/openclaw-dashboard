@@ -253,9 +253,11 @@ const staticFiles = {
   '/styles.css': { file: path.join(__dirname, 'styles.css'), type: 'text/css' },
   '/core-helpers.js': { file: path.join(__dirname, 'core-helpers.js'), type: 'application/javascript' },
   '/render-helpers.js': { file: path.join(__dirname, 'render-helpers.js'), type: 'application/javascript' },
+  '/auth-ui.js': { file: path.join(__dirname, 'auth-ui.js'), type: 'application/javascript' },
   '/app.js': { file: path.join(__dirname, 'app.js'), type: 'application/javascript' },
   '/misc-ui.js': { file: path.join(__dirname, 'misc-ui.js'), type: 'application/javascript' },
-  '/system-ui.js': { file: path.join(__dirname, 'system-ui.js'), type: 'application/javascript' }
+  '/system-ui.js': { file: path.join(__dirname, 'system-ui.js'), type: 'application/javascript' },
+  '/bootstrap.js': { file: path.join(__dirname, 'bootstrap.js'), type: 'application/javascript' }
 };
 
 // --- Main Server ---

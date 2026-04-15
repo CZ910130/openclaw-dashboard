@@ -381,17 +381,25 @@ async function checkNewNotifications() {
     }
   } catch {}
 }
-visibleInterval(checkNewNotifications, 30000);
-setTimeout(checkNewNotifications, 3000);
-document.addEventListener('click', (e) => {
+function handleNotifPanelOutsideClick(e) {
   const panel = document.getElementById('notifPanel');
   const bell = document.getElementById('notificationBell');
   const bellMobile = document.getElementById('notificationBellMobile');
+  if (!panel || !bell) return;
   if (isOpenState(panel, NOTIF_PANEL_OPEN_CLASS) && !panel.contains(e.target) && !bell.contains(e.target) && (!bellMobile || !bellMobile.contains(e.target))) {
     setOpenState(panel, false, NOTIF_PANEL_OPEN_CLASS);
     setNotifPanelExpanded(false);
   }
-});
+}
+
+function initSystemUi() {
+  if (!document.body.dataset.boundSystemUi) {
+    document.body.dataset.boundSystemUi = 'true';
+    document.addEventListener('click', handleNotifPanelOutsideClick);
+  }
+  visibleInterval(checkNewNotifications, 30000);
+  setTimeout(checkNewNotifications, 3000);
+}
 
 async function dockerAction(action, id) {
   const label = action === 'prune-containers' ? 'prune stopped containers' : action === 'prune-images' ? 'prune unused images' : action + ' ' + id;

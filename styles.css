@@ -3270,3 +3270,99 @@ body.light-theme ::selection { background: rgba(99,102,241,0.2); }
   border-radius: 4px;
   width: 100%;
 }
+
+.password-strength-weak {
+  background: var(--red) !important;
+}
+
+.password-strength-medium {
+  background: var(--yellow) !important;
+}
+
+.password-strength-strong {
+  background: var(--green) !important;
+}
+
+.password-strength-text-weak {
+  color: var(--red) !important;
+}
+
+.password-strength-text-medium {
+  color: var(--yellow) !important;
+}
+
+.password-strength-text-strong {
+  color: var(--green) !important;
+}
+
+.status-good {
+  color: var(--green) !important;
+}
+
+.status-bad {
+  color: var(--red) !important;
+}
+
+.inline-code-token {
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.markdown-heading {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.markdown-heading-h3 {
+  font-size: 16px;
+  margin: 16px 0 8px;
+}
+
+.markdown-heading-h2 {
+  font-size: 18px;
+  margin: 20px 0 12px;
+}
+
+.markdown-heading-h1 {
+  font-size: 20px;
+  margin: 24px 0 16px;
+}
+
+.viewer-message {
+  font-size: 13px;
+}
+
+.memory-file-item {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.memory-file-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.memory-file-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.memory-file-icon {
+  font-size: 18px;
+}
+
+.memory-file-name {
+  font-weight: 600;
+  font-size: 13px;
+  flex: 1;
+}
+
+.memory-file-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}

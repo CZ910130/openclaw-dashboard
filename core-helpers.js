@@ -8,6 +8,13 @@ function getApiBasePath() {
   return cleaned;
 }
 
+const API_BASE = getApiBasePath();
+const AUTH_HIDDEN_CLASS = 'auth-form-hidden';
+const APP_HIDDEN_CLASS = 'app-hidden';
+const NOTIF_PANEL_OPEN_CLASS = 'notif-panel-open';
+const SESSION_MODAL_OPEN_CLASS = 'session-modal-open';
+const NOTIF_BADGE_VISIBLE_CLASS = 'notification-badge-visible';
+
 function toggleMobileSidebar() {
   const sidebar = document.querySelector('.sidebar');
   if (sidebar) {

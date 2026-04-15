@@ -73,11 +73,13 @@ function loadScript(context, filename) {
 test('index.html loads frontend scripts in dependency order', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const order = [
-    'core-helpers.js?v=1',
+    'core-helpers.js?v=2',
     'render-helpers.js?v=1',
-    'app.js?v=36',
-    'misc-ui.js?v=1',
-    'system-ui.js?v=1',
+    'auth-ui.js?v=1',
+    'app.js?v=37',
+    'misc-ui.js?v=2',
+    'system-ui.js?v=2',
+    'bootstrap.js?v=1',
   ];
   let last = -1;
   for (const token of order) {
@@ -141,11 +143,18 @@ test('frontend module files are registered for static serving and hot reload', (
   const serverJs = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   const devmodeJs = fs.readFileSync(path.join(__dirname, '..', 'lib', 'devmode.js'), 'utf8');
   const middlewareJs = fs.readFileSync(path.join(__dirname, '..', 'lib', 'middleware.js'), 'utf8');
-  for (const token of ['/core-helpers.js', '/render-helpers.js', '/misc-ui.js', '/system-ui.js']) {
+  for (const token of ['/core-helpers.js', '/render-helpers.js', '/auth-ui.js', '/misc-ui.js', '/system-ui.js', '/bootstrap.js']) {
     assert.ok(serverJs.includes(token), `server missing ${token}`);
   }
-  for (const token of ['core-helpers.js', 'render-helpers.js', 'misc-ui.js', 'system-ui.js']) {
+  for (const token of ['core-helpers.js', 'render-helpers.js', 'auth-ui.js', 'misc-ui.js', 'system-ui.js', 'bootstrap.js']) {
     assert.ok(devmodeJs.includes(token), `devmode missing ${token}`);
     assert.ok(middlewareJs.includes(token), `middleware missing ${token}`);
+  }
+});
+
+test('bootstrap initializes module init hooks in one place', () => {
+  const bootstrapJs = fs.readFileSync(path.join(__dirname, '..', 'bootstrap.js'), 'utf8');
+  for (const token of ['initAuthUi()', 'initAppUi()', 'initMiscUi()', 'initSystemUi()', 'beginAuthBootstrap()']) {
+    assert.ok(bootstrapJs.includes(token), `bootstrap missing ${token}`);
   }
 });
