@@ -1465,26 +1465,17 @@ function updateOverview() {
       const maxDay = days[vals.indexOf(Math.max(...vals))];
       const maxVal = Math.max(...vals);
       [
-        ['7-Day Total', '$' + total.toFixed(2), 'var(--accent)', '18px', null],
-        ['Daily Avg', '$' + avg.toFixed(2), 'var(--green)', '18px', null],
-        ['Peak Day', new Date(maxDay).toLocaleDateString('en',{month:'short',day:'numeric'}), 'var(--text-primary)', '14px', '$' + maxVal.toFixed(2)]
-      ].forEach(([label, value, color, size, sub]) => {
-        const box = document.createElement('div');
-        const labelEl = document.createElement('div');
-        labelEl.style.cssText = 'font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;';
-        labelEl.textContent = label;
-        const valueEl = document.createElement('div');
-        valueEl.style.cssText = `font-size:${size};font-weight:${size === '18px' ? '700' : '600'};color:${color};${size === '18px' ? "font-family:'JetBrains Mono',monospace;" : ''}`;
-        valueEl.textContent = value;
-        box.appendChild(labelEl);
-        box.appendChild(valueEl);
-        if (sub) {
-          const subEl = document.createElement('div');
-          subEl.style.cssText = "font-size:12px;color:var(--yellow);font-family:'JetBrains Mono',monospace;";
-          subEl.textContent = sub;
-          box.appendChild(subEl);
-        }
-        summaryEl.appendChild(box);
+        ['7-Day Total', '$' + total.toFixed(2), 'var(--accent)', '18px', null, true],
+        ['Daily Avg', '$' + avg.toFixed(2), 'var(--green)', '18px', null, true],
+        ['Peak Day', new Date(maxDay).toLocaleDateString('en',{month:'short',day:'numeric'}), 'var(--text-primary)', '14px', '$' + maxVal.toFixed(2), false]
+      ].forEach(([label, value, color, size, sub, mono]) => {
+        summaryEl.appendChild(createLabeledValue(label, value, {
+          valueColor: color,
+          valueSize: size,
+          valueWeight: size === '18px' ? '700' : '600',
+          subText: sub,
+          mono
+        }));
       });
     }
   }
@@ -1507,35 +1498,7 @@ function refreshExpandedMessages(key) {
     .then(msgs => {
       if (!document.getElementById('expanded-msgs-' + CSS.escape(key))) return;
       const last10 = msgs.slice(-10);
-      el.innerHTML = '';
-      if (!last10.length) {
-        const empty = document.createElement('div');
-        empty.style.color = 'var(--text-muted)';
-        empty.textContent = 'No messages';
-        el.appendChild(empty);
-        return;
-      }
-      last10.forEach(m => {
-        const roleColor = m.role === 'user' ? 'var(--blue)' : m.role === 'assistant' ? 'var(--green)' : 'var(--yellow)';
-        const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'}) : '';
-        const row = document.createElement('div');
-        row.style.cssText = 'padding:6px 0;border-bottom:1px solid var(--border);';
-        const head = document.createElement('div');
-        const role = document.createElement('span');
-        role.style.cssText = `font-weight:600;color:${roleColor};text-transform:uppercase;font-size:10px;margin-right:8px;`;
-        role.textContent = m.role || '';
-        const timeEl = document.createElement('span');
-        timeEl.style.cssText = 'color:var(--text-muted);font-size:10px;';
-        timeEl.textContent = time;
-        head.appendChild(role);
-        head.appendChild(timeEl);
-        const body = document.createElement('div');
-        body.style.cssText = "color:var(--text-primary);line-height:1.4;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:2px;";
-        body.textContent = m.content || '';
-        row.appendChild(head);
-        row.appendChild(body);
-        el.appendChild(row);
-      });
+      renderSessionMessages(el, last10, { emptyText: 'No messages', compact: true });
     }).catch(() => {});
 }
 
@@ -1740,11 +1703,10 @@ function toggleSessionExpand(key, e) {
 
   const detail = document.createElement('div');
   detail.id = 'expanded-' + key;
-  detail.className = 'session-expanded';
-  detail.style.cssText = 'padding:16px 20px;background:var(--bg-tertiary);border-bottom:1px solid var(--border);animation:fadeIn 0.2s ease;';
+  detail.className = 'session-expanded session-detail-panel';
 
   const grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;';
+  grid.className = 'session-detail-grid';
   [
     ['Session Key', s.key, 'mono', '11px', null],
     ['Model', s.model.split('/').pop(), 'mono', '12px', modelColor],
@@ -1754,37 +1716,30 @@ function toggleSessionExpand(key, e) {
     ['Created', createdAgo, '', '12px', null],
     ['Last Active', ago, '', '12px', null]
   ].forEach(([label, value, cls, fontSize, color]) => {
-    const cell = document.createElement('div');
-    const labelEl = document.createElement('div');
-    labelEl.style.cssText = 'font-size:10px;color:var(--text-muted);text-transform:uppercase;';
-    labelEl.textContent = label;
-    const valueEl = document.createElement('div');
-    if (cls) valueEl.className = cls;
-    valueEl.style.fontSize = fontSize;
-    if (label === 'Session Key') valueEl.style.wordBreak = 'break-all';
-    if (color) valueEl.style.color = color;
-    valueEl.textContent = value;
-    cell.appendChild(labelEl);
-    cell.appendChild(valueEl);
-    grid.appendChild(cell);
+    grid.appendChild(createLabeledValue(label, value, {
+      valueClass: cls,
+      valueSize: fontSize,
+      valueColor: color,
+      valueBreakAll: label === 'Session Key'
+    }));
   });
 
   const header = document.createElement('div');
-  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;';
+  header.className = 'session-detail-header';
   const title = document.createElement('span');
-  title.style.cssText = 'font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;';
+  title.className = 'session-detail-title';
   title.textContent = 'Recent Messages';
   const fullBtn = document.createElement('button');
   fullBtn.textContent = 'Full View';
-  fullBtn.style.cssText = 'background:var(--accent);color:white;border:none;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;';
+  fullBtn.className = 'session-detail-action';
   fullBtn.onclick = () => openSessionDetail(s.key);
   header.appendChild(title);
   header.appendChild(fullBtn);
 
   const msgs = document.createElement('div');
   msgs.id = 'expanded-msgs-' + CSS.escape(key);
-  msgs.style.cssText = 'font-size:12px;color:var(--text-muted);';
-  msgs.textContent = 'Loading...';
+  msgs.className = 'session-message-list';
+  renderSessionMessages(msgs, [], { loadingText: 'Loading...' });
 
   detail.appendChild(grid);
   detail.appendChild(header);
@@ -2620,6 +2575,102 @@ function getSessionColor(name) {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
   return colors[Math.abs(hash) % colors.length];
+}
+
+function getRoleColor(role) {
+  return role === 'user' ? 'var(--blue)' : role === 'assistant' ? 'var(--green)' : 'var(--yellow)';
+}
+
+function createMutedNote(text, className = 'ui-muted-note') {
+  const el = document.createElement('div');
+  el.className = className;
+  el.textContent = text;
+  return el;
+}
+
+function createLabeledValue(label, value, options = {}) {
+  const {
+    valueColor = '',
+    valueSize = '13px',
+    valueWeight = '',
+    valueClass = '',
+    mono = false,
+    subText = '',
+    compactLabel = false,
+    valueBreakAll = false,
+    containerClass = ''
+  } = options;
+
+  const box = document.createElement('div');
+  if (containerClass) box.className = containerClass;
+
+  const labelEl = document.createElement('div');
+  labelEl.className = compactLabel ? 'ui-meta-label ui-meta-label-compact' : 'ui-meta-label';
+  labelEl.textContent = label;
+
+  const valueEl = document.createElement('div');
+  valueEl.className = 'ui-meta-value';
+  if (valueClass) valueEl.classList.add(...valueClass.split(' ').filter(Boolean));
+  if (mono) valueEl.classList.add('mono');
+  if (valueBreakAll) valueEl.classList.add('ui-break-all');
+  valueEl.style.fontSize = valueSize;
+  if (valueWeight) valueEl.style.fontWeight = valueWeight;
+  if (valueColor) valueEl.style.color = valueColor;
+  valueEl.textContent = value;
+
+  box.appendChild(labelEl);
+  box.appendChild(valueEl);
+
+  if (subText) {
+    const subEl = document.createElement('div');
+    subEl.className = 'ui-meta-sub mono';
+    subEl.textContent = subText;
+    box.appendChild(subEl);
+  }
+
+  return box;
+}
+
+function createSessionMessageRow(message, options = {}) {
+  const { compact = false } = options;
+  const row = document.createElement('div');
+  row.className = compact ? 'session-message-row session-message-row-compact' : 'session-message-row';
+
+  const head = document.createElement('div');
+  head.className = 'session-message-head';
+
+  const role = document.createElement('span');
+  role.className = 'session-message-role';
+  role.style.color = getRoleColor(message.role);
+  role.textContent = message.role || '';
+
+  const timeEl = document.createElement('span');
+  timeEl.className = 'session-message-time';
+  timeEl.textContent = message.timestamp ? new Date(message.timestamp).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : '';
+
+  const body = document.createElement('div');
+  body.className = compact ? 'session-message-body session-message-body-compact mono' : 'session-message-body mono';
+  body.textContent = message.content || '';
+
+  head.appendChild(role);
+  head.appendChild(timeEl);
+  row.appendChild(head);
+  row.appendChild(body);
+  return row;
+}
+
+function renderSessionMessages(container, messages, options = {}) {
+  const { emptyText = 'No messages', compact = false, loadingText = '' } = options;
+  container.innerHTML = '';
+  if (loadingText) {
+    container.appendChild(createMutedNote(loadingText));
+    return;
+  }
+  if (!messages.length) {
+    container.appendChild(createMutedNote(emptyText));
+    return;
+  }
+  messages.forEach(message => container.appendChild(createSessionMessageRow(message, { compact })));
 }
 
 function applyFeedFilter() {
@@ -3659,64 +3710,22 @@ function openSessionDetail(key) {
     ['Last Active', ago, null, false],
     ['Channel', s.channel || '--', null, false]
   ].forEach(([label, value, color, mono]) => {
-    const box = document.createElement('div');
-    const labelEl = document.createElement('div');
-    labelEl.style.cssText = 'font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;';
-    labelEl.textContent = label;
-    const valueEl = document.createElement('div');
-    if (mono) valueEl.className = 'mono';
-    valueEl.style.cssText = `font-size:13px;${color ? 'font-weight:600;color:' + color + ';' : ''}`;
-    valueEl.textContent = value;
-    box.appendChild(labelEl);
-    box.appendChild(valueEl);
-    modalStats.appendChild(box);
+    modalStats.appendChild(createLabeledValue(label, value, {
+      valueColor: color || '',
+      valueWeight: color ? '600' : '',
+      mono,
+      compactLabel: true
+    }));
   });
-  modalMessages.innerHTML = '';
-  const loading = document.createElement('div');
-  loading.style.cssText = 'color:var(--text-muted);font-size:13px;';
-  loading.textContent = 'Loading...';
-  modalMessages.appendChild(loading);
+  renderSessionMessages(modalMessages, [], { loadingText: 'Loading...' });
   setOpenState('sessionModal', true, SESSION_MODAL_OPEN_CLASS);
   authFetch(API_BASE + '/api/session-messages?id=' + encodeURIComponent(s.sessionId || s.key))
     .then(r => r.json())
     .then(msgs => {
-      if (!msgs.length) {
-        modalMessages.innerHTML = '';
-        const empty = document.createElement('div');
-        empty.style.cssText = 'color:var(--text-muted);font-size:13px;';
-        empty.textContent = 'No messages found';
-        modalMessages.appendChild(empty);
-        return;
-      }
-      modalMessages.innerHTML = '';
-      msgs.forEach(m => {
-        const roleColor = m.role === 'user' ? 'var(--blue)' : m.role === 'assistant' ? 'var(--green)' : 'var(--yellow)';
-        const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : '';
-        const row = document.createElement('div');
-        row.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;';
-        const head = document.createElement('div');
-        head.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:4px;';
-        const role = document.createElement('span');
-        role.style.cssText = `font-weight:600;color:${roleColor};text-transform:uppercase;font-size:10px;`;
-        role.textContent = m.role || '';
-        const timeEl = document.createElement('span');
-        timeEl.style.cssText = 'color:var(--text-muted);font-size:10px;';
-        timeEl.textContent = time;
-        head.appendChild(role);
-        head.appendChild(timeEl);
-        const body = document.createElement('div');
-        body.style.cssText = "color:var(--text-primary);line-height:1.4;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;";
-        body.textContent = m.content || '';
-        row.appendChild(head);
-        row.appendChild(body);
-        modalMessages.appendChild(row);
-      });
+      renderSessionMessages(modalMessages, msgs, { emptyText: 'No messages found' });
     }).catch(() => {
       modalMessages.innerHTML = '';
-      const failed = document.createElement('div');
-      failed.style.color = 'var(--text-muted)';
-      failed.textContent = 'Failed to load';
-      modalMessages.appendChild(failed);
+      modalMessages.appendChild(createMutedNote('Failed to load'));
     });
 }
 function closeSessionModal() { setOpenState('sessionModal', false, SESSION_MODAL_OPEN_CLASS); }
