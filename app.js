@@ -29,6 +29,15 @@ document.addEventListener('click', function(e) {
 
 const API_BASE = getApiBasePath();
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Page Visibility API: pause polling when tab is hidden, resume when visible
 const _visibleIntervals = [];
 function visibleInterval(fn, ms) {
@@ -280,6 +289,7 @@ async function handleLogin(event) {
     const res = await fetch(API_BASE + '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(body)
     });
 
@@ -1346,7 +1356,7 @@ function updateOverview() {
     const tokens = s.totalTokens || 0;
     const tokStr = tokens >= 1000 ? (tokens / 1000).toFixed(0) + 'k' : tokens;
     const costStr = s.cost > 0 ? '$' + s.cost.toFixed(2) : '';
-    const snippet = s.lastMessage ? s.lastMessage : '';
+    const snippet = s.lastMessage ? escapeHtml(s.lastMessage) : '';
     
     const dur = s.createdAt ? Date.now() - s.createdAt : 0;
     const durStr = dur > 86400000 ? Math.floor(dur / 86400000) + 'd' :
@@ -1358,12 +1368,12 @@ function updateOverview() {
         <div class="activity-dot ${isActive ? 'running' : ''}"></div>
         <div class="activity-content">
           <div class="activity-header">
-            <span class="activity-name">${s.label}</span><span class="badge ${badgeText}">${badgeText}</span>
+            <span class="activity-name">${escapeHtml(s.label)}</span><span class="badge ${badgeText}">${badgeText}</span>
             <span class="activity-time">${ago}</span>
           </div>
           ${snippet ? `<div class="activity-snippet">${snippet}</div>` : ''}
           <div class="activity-meta">
-            <span>${s.model.split('/').pop()}</span>
+            <span>${escapeHtml(s.model.split('/').pop())}</span>
             <span>${tokStr} tok</span>
             ${costStr ? `<span>${costStr}</span>` : ''}
             ${durStr ? `<span>⏱ ${durStr}</span>` : ''}
@@ -1693,7 +1703,7 @@ function updateSessions() {
     const modelColor = getModelColor(s.model);
     const activeIndicator = isActive ? ' <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 5px;background:rgba(16,185,129,0.15);color:var(--green);border-radius:4px;font-size:9px;font-weight:600;vertical-align:middle;">●&thinsp;LIVE</span>' : '';
     const costStr = s.cost > 0 ? '$' + s.cost.toFixed(2) : '-';
-    const lastMsg = s.lastMessage || '';
+    const lastMsg = escapeHtml(s.lastMessage || '');
     const escapedKey = s.key.replace(/'/g, "\\'");
     const checked = selectedSessions.has(s.key) ? 'checked' : '';
 
@@ -1702,10 +1712,10 @@ function updateSessions() {
         <div class="table-cell"><input type="checkbox" class="session-checkbox" ${checked} onchange="toggleSessionCompare('${escapedKey}', this.checked)" onclick="event.stopPropagation()"></div>
         <div class="table-cell" onclick="toggleSessionExpand('${escapedKey}', event)">${statusDot}</div>
         <div class="table-cell" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" onclick="toggleSessionExpand('${escapedKey}', event)">
-          <strong>${s.label}</strong>${activeIndicator}
+          <strong>${escapeHtml(s.label)}</strong>${activeIndicator}
         </div>
         <div class="table-cell" onclick="toggleSessionExpand('${escapedKey}', event)"><span class="badge ${typeClass}">${typeClass}</span></div>
-        <div class="table-cell mono" style="color:${modelColor};" onclick="toggleSessionExpand('${escapedKey}', event)">${shortModel}</div>
+        <div class="table-cell mono" style="color:${modelColor};" onclick="toggleSessionExpand('${escapedKey}', event)">${escapeHtml(shortModel)}</div>
         <div class="table-cell mono" onclick="toggleSessionExpand('${escapedKey}', event)">${(s.totalTokens||0).toLocaleString()}</div>
         <div class="table-cell mono" onclick="toggleSessionExpand('${escapedKey}', event)">${costStr}</div>
         <div class="table-cell" style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;" onclick="toggleSessionExpand('${escapedKey}', event)">${lastMsg}</div>

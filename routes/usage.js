@@ -18,8 +18,8 @@ function setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir) {
       script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-openai-usage.sh')
     },
     'minimax': {
-      file: path.join(dataDir, 'minimax-usage.json'),
-      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-minimax-usage.sh')
+      file: path.join(dataDir, 'opencode-go-usage.json'),
+      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-opencode-go-usage.sh')
     },
     'opencode-go': {
       file: path.join(dataDir, 'opencode-go-usage.json'),
@@ -31,13 +31,13 @@ function setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir) {
       script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-openai-usage.sh')
     },
     'kimi': {
-      file: path.join(dataDir, 'minimax-usage.json'),
-      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-minimax-usage.sh')
+      file: path.join(dataDir, 'opencode-go-usage.json'),
+      script: path.join(WORKSPACE_DIR, 'scripts', 'scrape-opencode-go-usage.sh')
     }
   };
 
   // Handle /api/usage/:provider
-  const usageMatch = req.url.match(/^\/api\/usage\/([a-z]+)$/);
+  const usageMatch = req.url.match(/^\/api\/usage\/([a-z0-9-]+)$/);
   if (usageMatch && req.method === 'GET') {
     const provider = usageMatch[1];
     const config = providers[provider];
@@ -53,7 +53,7 @@ function setupUsageRoutes(req, res, WORKSPACE_DIR, dataDir) {
   }
 
   // Handle /api/usage/scrape/:provider
-  const scrapeMatch = req.url.match(/^\/api\/usage\/scrape\/([a-z]+)$/);
+  const scrapeMatch = req.url.match(/^\/api\/usage\/scrape\/([a-z0-9-]+)$/);
   if (scrapeMatch && req.method === 'POST') {
     const provider = scrapeMatch[1];
     const config = providers[provider];
