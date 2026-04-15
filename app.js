@@ -4443,14 +4443,23 @@ const notifLabels = {
 };
 let notifLastSeen = localStorage.getItem('notifLastSeen') || '';
 
+function setNotifPanelExpanded(isExpanded) {
+  ['notificationBell', 'notificationBellMobile'].forEach(id => {
+    const bell = document.getElementById(id);
+    if (bell) bell.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+  });
+}
+
 function toggleNotifPanel() {
-  console.log('toggleNotifPanel called');
   const panel = document.getElementById('notifPanel');
-  console.log('Panel element:', panel);
-  console.log('Current display:', panel.style.display);
-  if (panel.style.display === 'flex') { panel.style.display = 'none'; console.log('Hiding panel'); return; }
+  if (!panel) return;
+  if (panel.style.display === 'flex') {
+    panel.style.display = 'none';
+    setNotifPanelExpanded(false);
+    return;
+  }
   panel.style.display = 'flex';
-  console.log('Showing panel');
+  setNotifPanelExpanded(true);
   fetchNotifications();
 }
 
@@ -4524,7 +4533,10 @@ document.addEventListener('click', (e) => {
   const panel = document.getElementById('notifPanel');
   const bell = document.getElementById('notificationBell');
   const bellMobile = document.getElementById('notificationBellMobile');
-  if (panel.style.display === 'flex' && !panel.contains(e.target) && !bell.contains(e.target) && (!bellMobile || !bellMobile.contains(e.target))) panel.style.display = 'none';
+  if (panel.style.display === 'flex' && !panel.contains(e.target) && !bell.contains(e.target) && (!bellMobile || !bellMobile.contains(e.target))) {
+    panel.style.display = 'none';
+    setNotifPanelExpanded(false);
+  }
 });
 
 async function dockerAction(action, id) {
