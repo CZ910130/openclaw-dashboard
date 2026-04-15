@@ -74,7 +74,7 @@ body {
 }
 
 .file-list-item-selected,
-.file-list-item-hover {
+.file-list-item:hover {
   background: var(--bg-tertiary);
 }
 

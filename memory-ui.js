@@ -81,7 +81,7 @@ function renderMemoryFilesList() {
     const icon = f.name.includes('MEMORY') ? '🧠' : f.name.includes('HEARTBEAT') ? '💓' : '📄';
     const item = document.createElement('div');
     item.className = 'memory-file-item';
-    item.onclick = () => window.loadMemoryFile(encodeURIComponent(f.name));
+    item.addEventListener('click', () => window.loadMemoryFile(encodeURIComponent(f.name)));
 
     const header = document.createElement('div');
     header.className = 'memory-file-header';

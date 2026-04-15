@@ -169,7 +169,7 @@ function updateOverview() {
 
       const item = document.createElement('div');
       item.className = `activity-item type-${typeClass} ${isActive ? 'running' : ''}`.trim();
-      item.onclick = () => openSessionDetail(s.key);
+      item.addEventListener('click', () => openSessionDetail(s.key));
 
       const dot = document.createElement('div');
       dot.className = `activity-dot ${isActive ? 'running' : ''}`.trim();

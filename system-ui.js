@@ -77,11 +77,11 @@ function showReauthModal(targetPage) {
     const verifyBtn = document.createElement('button');
     verifyBtn.textContent = 'Verify';
     verifyBtn.className = 'reauth-action-btn reauth-action-btn-primary';
-    verifyBtn.onclick = () => submitReauth();
+    verifyBtn.addEventListener('click', () => submitReauth());
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'Cancel';
     cancelBtn.className = 'reauth-action-btn reauth-action-btn-secondary';
-    cancelBtn.onclick = () => cancelReauth();
+    cancelBtn.addEventListener('click', () => cancelReauth());
     actions.appendChild(verifyBtn);
     actions.appendChild(cancelBtn);
 
@@ -242,7 +242,7 @@ async function loadDocker() {
           const btn = document.createElement('button');
           btn.textContent = def.label;
           btn.style.cssText = `padding:3px 8px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;color:${def.color};cursor:pointer;font-size:11px;${idx < actionDefs.length - 1 ? 'margin-right:4px;' : ''}`;
-          btn.onclick = () => dockerAction(def.action, c.Names || '');
+          btn.addEventListener('click', () => dockerAction(def.action, c.Names || ''));
           actionsTd.appendChild(btn);
         });
         tr.appendChild(actionsTd);

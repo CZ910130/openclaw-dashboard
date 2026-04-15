@@ -445,11 +445,11 @@ async function fetchNewData() {
         const toggleBtn = document.createElement('button');
         toggleBtn.textContent = c.enabled ? 'ON' : 'OFF';
         toggleBtn.style.cssText = `padding:2px 8px;background:${toggleBg};color:${toggleColor};border:1px solid var(--border);border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;margin-right:4px;`;
-        toggleBtn.onclick = () => window.toggleCronJob(c.id);
+        toggleBtn.addEventListener('click', () => window.toggleCronJob(c.id));
         const runBtn = document.createElement('button');
         runBtn.textContent = '▶';
         runBtn.style.cssText = 'padding:2px 8px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;';
-        runBtn.onclick = () => window.runCronJob(c.id);
+        runBtn.addEventListener('click', () => window.runCronJob(c.id));
         header.appendChild(toggleBtn);
         header.appendChild(runBtn);
         const schedule = document.createElement('span');
@@ -574,10 +574,10 @@ window.runCronJob = async function(id) {
         more.id = 'memShowMore';
         more.className = 'mem-show-more';
         more.textContent = `Show all (${memFiles.length} files) ↓`;
-        more.onclick = function() {
+        more.addEventListener('click', function() {
           document.querySelectorAll('.mem-file-item').forEach(e => e.classList.remove('ui-hidden'));
           this.classList.add('ui-hidden');
-        };
+        });
         memoryFilesEl.appendChild(more);
       }
     }

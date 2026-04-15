@@ -45,9 +45,7 @@ function renderKeyFilesList() {
     const item = document.createElement('div');
     item.className = 'file-list-item';
     if (isSelected) item.classList.add('file-list-item-selected');
-    item.onmouseover = () => { item.classList.add('file-list-item-hover'); };
-    item.onmouseout = () => { item.classList.remove('file-list-item-hover'); };
-    item.onclick = () => window.loadKeyFile(encodeURIComponent(f.name));
+    item.addEventListener('click', () => window.loadKeyFile(encodeURIComponent(f.name)));
 
     const header = document.createElement('div');
     header.className = 'file-list-item-header';
@@ -281,7 +279,7 @@ function toggleSessionCompare(key, checked) {
       b.id = 'compareBtn';
       b.className = 'compare-btn';
       b.textContent = 'Compare Sessions';
-      b.onclick = showComparison;
+      b.addEventListener('click', showComparison);
       document.body.appendChild(b);
     }
   } else if (btn) {

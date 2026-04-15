@@ -208,7 +208,7 @@ function toggleSessionExpand(key, e) {
   const fullBtn = document.createElement('button');
   fullBtn.textContent = 'Full View';
   fullBtn.className = 'session-detail-action';
-  fullBtn.onclick = () => openSessionDetail(s.key);
+  fullBtn.addEventListener('click', () => openSessionDetail(s.key));
   header.appendChild(title);
   header.appendChild(fullBtn);
 
@@ -272,7 +272,7 @@ function updateSessions() {
       const cell = document.createElement('div');
       cell.className = `table-cell${opts.mono ? ' mono' : ''}`;
       if (opts.style) cell.style.cssText = opts.style;
-      if (opts.onClick) cell.onclick = opts.onClick;
+      if (opts.onClick) cell.addEventListener('click', opts.onClick);
       if (opts.text != null) cell.textContent = opts.text;
       row.appendChild(cell);
       return cell;
@@ -283,8 +283,8 @@ function updateSessions() {
     checkbox.type = 'checkbox';
     checkbox.className = 'session-checkbox';
     checkbox.checked = selectedSessions.has(s.key);
-    checkbox.onchange = () => toggleSessionCompare(s.key, checkbox.checked);
-    checkbox.onclick = (event) => event.stopPropagation();
+    checkbox.addEventListener('change', () => toggleSessionCompare(s.key, checkbox.checked));
+    checkbox.addEventListener('click', (event) => event.stopPropagation());
     cbCell.appendChild(checkbox);
 
     const expandClick = (event) => toggleSessionExpand(s.key, event);
