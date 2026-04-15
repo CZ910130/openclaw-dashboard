@@ -1689,7 +1689,20 @@ function renderTimeline(filtered) {
     const widthPct = Math.max(rightPct - leftPct, 1);
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
-    row.innerHTML = `<div style="width:100px;flex-shrink:0;font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;color:var(--text-secondary);">${escapeHtml(s.label)}</div><div style="flex:1;height:14px;background:var(--bg-primary);border-radius:4px;position:relative;overflow:hidden;"><div style="position:absolute;left:${leftPct}%;width:${widthPct}%;height:100%;background:${color};border-radius:4px;opacity:0.8;"></div></div>`;
+
+    const labelEl = document.createElement('div');
+    labelEl.style.cssText = 'width:100px;flex-shrink:0;font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;color:var(--text-secondary);';
+    labelEl.textContent = s.label;
+
+    const barWrap = document.createElement('div');
+    barWrap.style.cssText = 'flex:1;height:14px;background:var(--bg-primary);border-radius:4px;position:relative;overflow:hidden;';
+
+    const bar = document.createElement('div');
+    bar.style.cssText = `position:absolute;left:${leftPct}%;width:${widthPct}%;height:100%;background:${color};border-radius:4px;opacity:0.8;`;
+
+    barWrap.appendChild(bar);
+    row.appendChild(labelEl);
+    row.appendChild(barWrap);
     timelineEl.appendChild(row);
   });
 
@@ -3020,7 +3033,18 @@ window.runCronJob = async function(id) {
         const row = document.createElement('div');
         row.className = 'mem-file-item';
         row.style.cssText = `display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);${idx >= memLimit ? 'display:none;' : ''}`;
-        row.innerHTML = `<span class="mono" style="font-size:13px;">📄 ${escapeHtml(f.name)}</span><span style="font-size:12px;color:var(--text-muted);">${escapeHtml(ago)}</span>`;
+
+        const nameEl = document.createElement('span');
+        nameEl.className = 'mono';
+        nameEl.style.fontSize = '13px';
+        nameEl.textContent = `📄 ${f.name}`;
+
+        const agoEl = document.createElement('span');
+        agoEl.style.cssText = 'font-size:12px;color:var(--text-muted);';
+        agoEl.textContent = ago;
+
+        row.appendChild(nameEl);
+        row.appendChild(agoEl);
         memoryFilesEl.appendChild(row);
       });
       if (memFiles.length > memLimit) {
@@ -3054,7 +3078,31 @@ window.runCronJob = async function(id) {
           const pct = (total / maxTok) * 100;
           const wrap = document.createElement('div');
           wrap.style.marginBottom = '12px';
-          wrap.innerHTML = `<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span class="mono">${escapeHtml(model)}</span><span class="mono" style="color:var(--text-muted);">${(d.input/1000).toFixed(0)}k in / ${(d.output/1000).toFixed(0)}k out</span></div><div style="height:6px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--purple));border-radius:3px;"></div></div>`;
+
+          const header = document.createElement('div');
+          header.className = 'token-breakdown-header';
+
+          const modelEl = document.createElement('span');
+          modelEl.className = 'mono';
+          modelEl.textContent = model;
+
+          const totalsEl = document.createElement('span');
+          totalsEl.className = 'mono';
+          totalsEl.style.color = 'var(--text-muted)';
+          totalsEl.textContent = `${(d.input/1000).toFixed(0)}k in / ${(d.output/1000).toFixed(0)}k out`;
+
+          const barBg = document.createElement('div');
+          barBg.className = 'token-breakdown-bar';
+
+          const barFill = document.createElement('div');
+          barFill.className = 'token-breakdown-bar-fill';
+          barFill.style.width = `${pct}%`;
+
+          header.appendChild(modelEl);
+          header.appendChild(totalsEl);
+          barBg.appendChild(barFill);
+          wrap.appendChild(header);
+          wrap.appendChild(barBg);
           tokenBreakdownEl.appendChild(wrap);
         });
     }
@@ -3075,7 +3123,18 @@ window.runCronJob = async function(id) {
         const color = modelColors[shortModel] || 'var(--text-muted)';
         const row = document.createElement('div');
         row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);';
-        row.innerHTML = `<span style="font-weight:500;font-size:13px;">${escapeHtml(s.label)}</span><span class="mono" style="font-size:11px;color:${color};background:${color}18;padding:2px 8px;border-radius:4px;">${escapeHtml(shortModel)}</span>`;
+
+        const labelEl = document.createElement('span');
+        labelEl.style.cssText = 'font-weight:500;font-size:13px;';
+        labelEl.textContent = s.label;
+
+        const modelEl = document.createElement('span');
+        modelEl.className = 'mono';
+        modelEl.style.cssText = `font-size:11px;color:${color};background:${color}18;padding:2px 8px;border-radius:4px;`;
+        modelEl.textContent = shortModel;
+
+        row.appendChild(labelEl);
+        row.appendChild(modelEl);
         sessionModelsEl.appendChild(row);
       });
     }
@@ -3170,7 +3229,26 @@ function renderMemoryFilesList() {
     item.onmouseover = () => { item.style.background = 'var(--bg-tertiary)'; };
     item.onmouseout = () => { item.style.background = 'transparent'; };
     item.onclick = () => window.loadMemoryFile(encodeURIComponent(f.name));
-    item.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="font-size:18px;">${icon}</span><span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(f.name)}</span></div><div style="font-size:11px;color:var(--text-muted);">${sizeKb} KB · ${escapeHtml(ago)}</div>`;
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;';
+
+    const iconEl = document.createElement('span');
+    iconEl.style.fontSize = '18px';
+    iconEl.textContent = icon;
+
+    const nameEl = document.createElement('span');
+    nameEl.style.cssText = 'font-weight:600;font-size:13px;flex:1;';
+    nameEl.textContent = f.name;
+
+    const metaEl = document.createElement('div');
+    metaEl.style.cssText = 'font-size:11px;color:var(--text-muted);';
+    metaEl.textContent = `${sizeKb} KB · ${ago}`;
+
+    header.appendChild(iconEl);
+    header.appendChild(nameEl);
+    item.appendChild(header);
+    item.appendChild(metaEl);
     el.appendChild(item);
   });
 }
@@ -3224,7 +3302,26 @@ function renderKeyFilesList() {
     item.onmouseover = () => { item.style.background = 'var(--bg-tertiary)'; };
     item.onmouseout = () => { item.style.background = isSelected ? 'var(--bg-tertiary)' : 'transparent'; };
     item.onclick = () => window.loadKeyFile(encodeURIComponent(f.name));
-    item.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="font-size:18px;">${icon}</span><span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(f.name)}</span></div><div style="font-size:11px;color:var(--text-muted);">${sizeKb} KB · ${escapeHtml(ago)}</div>`;
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;';
+
+    const iconEl = document.createElement('span');
+    iconEl.style.fontSize = '18px';
+    iconEl.textContent = icon;
+
+    const nameEl = document.createElement('span');
+    nameEl.style.cssText = 'font-weight:600;font-size:13px;flex:1;';
+    nameEl.textContent = f.name;
+
+    const metaEl = document.createElement('div');
+    metaEl.style.cssText = 'font-size:11px;color:var(--text-muted);';
+    metaEl.textContent = `${sizeKb} KB · ${ago}`;
+
+    header.appendChild(iconEl);
+    header.appendChild(nameEl);
+    item.appendChild(header);
+    item.appendChild(metaEl);
     el.appendChild(item);
   });
 }
