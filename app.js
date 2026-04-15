@@ -1732,7 +1732,6 @@ function updateSessions() {
   const filtered = getFilteredSessions();
   updateSessionsStats(filtered);
   try { renderTimeline(filtered); } catch(e) { console.error('Timeline error:', e); }
-  // Refresh expanded session messages async
   if (expandedSessionKey) {
     refreshExpandedMessages(expandedSessionKey);
     return;
@@ -1749,7 +1748,14 @@ function updateSessions() {
     return sortDir === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
   });
 
-  const rowsHtml = sorted.map(s => {
+  const tbody = document.getElementById('sessionsTableBody');
+  if (!sorted.length) {
+    setEmptyState(tbody, 'No sessions found', '🔍');
+    return;
+  }
+  tbody.innerHTML = '';
+
+  sorted.forEach(s => {
     const age = Date.now() - s.updatedAt;
     const ago = age < 60000 ? 'just now' : age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
     const isActive = age < 300000 && !s.aborted;
@@ -1758,30 +1764,55 @@ function updateSessions() {
     const typeClass = s.key.includes('subagent') ? 'sub' : s.key.includes('cron') ? 'cron' : s.kind === 'group' ? 'group' : 'main';
     const shortModel = s.model.split('/').pop();
     const modelColor = getModelColor(s.model);
-    const activeIndicator = isActive ? ' <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 5px;background:rgba(16,185,129,0.15);color:var(--green);border-radius:4px;font-size:9px;font-weight:600;vertical-align:middle;">●&thinsp;LIVE</span>' : '';
     const costStr = s.cost > 0 ? '$' + s.cost.toFixed(2) : '-';
-    const lastMsg = escapeHtml(s.lastMessage || '');
-    const escapedKey = s.key.replace(/'/g, "\\'");
-    const checked = selectedSessions.has(s.key) ? 'checked' : '';
 
-    return `
-      <div class="table-row ${statusClass}" data-session-key="${s.key}">
-        <div class="table-cell"><input type="checkbox" class="session-checkbox" ${checked} onchange="toggleSessionCompare('${escapedKey}', this.checked)" onclick="event.stopPropagation()"></div>
-        <div class="table-cell" onclick="toggleSessionExpand('${escapedKey}', event)">${statusDot}</div>
-        <div class="table-cell" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" onclick="toggleSessionExpand('${escapedKey}', event)">
-          <strong>${escapeHtml(s.label)}</strong>${activeIndicator}
-        </div>
-        <div class="table-cell" onclick="toggleSessionExpand('${escapedKey}', event)"><span class="badge ${typeClass}">${typeClass}</span></div>
-        <div class="table-cell mono" style="color:${modelColor};" onclick="toggleSessionExpand('${escapedKey}', event)">${escapeHtml(shortModel)}</div>
-        <div class="table-cell mono" onclick="toggleSessionExpand('${escapedKey}', event)">${(s.totalTokens||0).toLocaleString()}</div>
-        <div class="table-cell mono" onclick="toggleSessionExpand('${escapedKey}', event)">${costStr}</div>
-        <div class="table-cell" style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;" onclick="toggleSessionExpand('${escapedKey}', event)">${lastMsg}</div>
-        <div class="table-cell" onclick="toggleSessionExpand('${escapedKey}', event)">${ago}</div>
-      </div>`;
-  }).join('');
+    const row = document.createElement('div');
+    row.className = `table-row ${statusClass}`.trim();
+    row.dataset.sessionKey = s.key;
 
-  document.getElementById('sessionsTableBody').innerHTML = rowsHtml ||
-    '<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">No sessions found</div></div>';
+    const appendCell = (opts = {}) => {
+      const cell = document.createElement('div');
+      cell.className = `table-cell${opts.mono ? ' mono' : ''}`;
+      if (opts.style) cell.style.cssText = opts.style;
+      if (opts.onClick) cell.onclick = opts.onClick;
+      if (opts.html != null) cell.innerHTML = opts.html;
+      else if (opts.text != null) cell.textContent = opts.text;
+      row.appendChild(cell);
+      return cell;
+    };
+
+    const cbCell = appendCell();
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'session-checkbox';
+    checkbox.checked = selectedSessions.has(s.key);
+    checkbox.onchange = () => toggleSessionCompare(s.key, checkbox.checked);
+    checkbox.onclick = (event) => event.stopPropagation();
+    cbCell.appendChild(checkbox);
+
+    const expandClick = (event) => toggleSessionExpand(s.key, event);
+    appendCell({ text: statusDot, onClick: expandClick });
+
+    const labelCell = appendCell({ style: 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;', onClick: expandClick });
+    const strong = document.createElement('strong');
+    strong.textContent = s.label;
+    labelCell.appendChild(strong);
+    if (isActive) {
+      const live = document.createElement('span');
+      live.style.cssText = 'display:inline-flex;align-items:center;gap:3px;padding:1px 5px;background:rgba(16,185,129,0.15);color:var(--green);border-radius:4px;font-size:9px;font-weight:600;vertical-align:middle;margin-left:6px;';
+      live.innerHTML = '●&thinsp;LIVE';
+      labelCell.appendChild(live);
+    }
+
+    appendCell({ onClick: expandClick, html: `<span class="badge ${typeClass}">${escapeHtml(typeClass)}</span>` });
+    appendCell({ mono: true, style: `color:${modelColor};`, text: shortModel, onClick: expandClick });
+    appendCell({ mono: true, text: (s.totalTokens||0).toLocaleString(), onClick: expandClick });
+    appendCell({ mono: true, text: costStr, onClick: expandClick });
+    appendCell({ style: "font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;", text: s.lastMessage || '', onClick: expandClick });
+    appendCell({ text: ago, onClick: expandClick });
+
+    tbody.appendChild(row);
+  });
 }
 
 let _cachedClaudeUsage = null;
@@ -2728,49 +2759,71 @@ window.runCronJob = async function(id) {
   }
 };
 
-    document.getElementById('gitActivity').innerHTML = git.map(c => {
-      const age = now - c.timestamp;
-      const ago = age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
-      return `<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;">
-        <span class="mono" style="color:var(--accent);flex-shrink:0;">${escapeHtml(c.hash)}</span>
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.message)}</span>
-        <span style="flex-shrink:0;color:var(--text-muted);">${escapeHtml(c.repo)}</span>
-        <span style="flex-shrink:0;color:var(--text-muted);">${escapeHtml(ago)}</span>
-      </div>`;
-    }).join('') || '<div class="empty-state-text">No recent commits</div>';
+    const gitActivityEl = document.getElementById('gitActivity');
+    if (!git.length) {
+      setEmptyState(gitActivityEl, 'No recent commits');
+    } else {
+      gitActivityEl.innerHTML = '';
+      git.forEach(c => {
+        const age = now - c.timestamp;
+        const ago = age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;';
+        row.innerHTML = `<span class="mono" style="color:var(--accent);flex-shrink:0;">${escapeHtml(c.hash)}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.message)}</span><span style="flex-shrink:0;color:var(--text-muted);">${escapeHtml(c.repo)}</span><span style="flex-shrink:0;color:var(--text-muted);">${escapeHtml(ago)}</span>`;
+        gitActivityEl.appendChild(row);
+      });
+    }
 
     const memLimit = 5;
-    const memHtml = memFiles.map((f, idx) => {
-      const age = now - f.modified;
-      const ago = age < 60000 ? 'just now' : age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
-      return `<div class="mem-file-item" style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);${idx >= memLimit ? 'display:none;' : ''}">
-        <span class="mono" style="font-size:13px;">📄 ${escapeHtml(f.name)}</span>
-        <span style="font-size:12px;color:var(--text-muted);">${escapeHtml(ago)}</span>
-      </div>`;
-    }).join('') || '<div class="empty-state-text">No files</div>';
-    const showMoreBtn = memFiles.length > memLimit ? `<div id="memShowMore" style="text-align:center;padding:10px 0;cursor:pointer;color:var(--accent);font-size:13px;font-weight:500;" onclick="document.querySelectorAll('.mem-file-item').forEach(e=>e.style.display='flex');this.style.display='none';">Show all (${memFiles.length} files) ↓</div>` : '';
-    document.getElementById('memoryFiles').innerHTML = memHtml + showMoreBtn;
+    const memoryFilesEl = document.getElementById('memoryFiles');
+    if (!memFiles.length) {
+      setEmptyState(memoryFilesEl, 'No files');
+    } else {
+      memoryFilesEl.innerHTML = '';
+      memFiles.forEach((f, idx) => {
+        const age = now - f.modified;
+        const ago = age < 60000 ? 'just now' : age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
+        const row = document.createElement('div');
+        row.className = 'mem-file-item';
+        row.style.cssText = `display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);${idx >= memLimit ? 'display:none;' : ''}`;
+        row.innerHTML = `<span class="mono" style="font-size:13px;">📄 ${escapeHtml(f.name)}</span><span style="font-size:12px;color:var(--text-muted);">${escapeHtml(ago)}</span>`;
+        memoryFilesEl.appendChild(row);
+      });
+      if (memFiles.length > memLimit) {
+        const more = document.createElement('div');
+        more.id = 'memShowMore';
+        more.style.cssText = 'text-align:center;padding:10px 0;cursor:pointer;color:var(--accent);font-size:13px;font-weight:500;';
+        more.textContent = `Show all (${memFiles.length} files) ↓`;
+        more.onclick = function() {
+          document.querySelectorAll('.mem-file-item').forEach(e => e.style.display = 'flex');
+          this.style.display = 'none';
+        };
+        memoryFilesEl.appendChild(more);
+      }
+    }
 
     const inK = (tokens.totalInput / 1000).toFixed(0) + 'k';
     const outK = (tokens.totalOutput / 1000).toFixed(0) + 'k';
     document.getElementById('todayTokensOut').textContent = inK + ' in / ' + outK + ' out';
 
-    document.getElementById('tokenBreakdown').innerHTML = Object.entries(tokens.perModel || {})
-      .sort((a, b) => (b[1].input + b[1].output) - (a[1].input + a[1].output))
-      .map(([model, d]) => {
-        const total = d.input + d.output;
-        const maxTok = Math.max(...Object.values(tokens.perModel).map(m => m.input + m.output), 1);
-        const pct = (total / maxTok) * 100;
-        return `<div style="margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
-            <span class="mono">${escapeHtml(model)}</span>
-            <span class="mono" style="color:var(--text-muted);">${(d.input/1000).toFixed(0)}k in / ${(d.output/1000).toFixed(0)}k out</span>
-          </div>
-          <div style="height:6px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--purple));border-radius:3px;"></div>
-          </div>
-        </div>`;
-      }).join('') || '<div class="empty-state-text">No token data</div>';
+    const tokenBreakdownEl = document.getElementById('tokenBreakdown');
+    const perModelEntries = Object.entries(tokens.perModel || {});
+    if (!perModelEntries.length) {
+      setEmptyState(tokenBreakdownEl, 'No token data');
+    } else {
+      tokenBreakdownEl.innerHTML = '';
+      const maxTok = Math.max(...Object.values(tokens.perModel).map(m => m.input + m.output), 1);
+      perModelEntries
+        .sort((a, b) => (b[1].input + b[1].output) - (a[1].input + a[1].output))
+        .forEach(([model, d]) => {
+          const total = d.input + d.output;
+          const pct = (total / maxTok) * 100;
+          const wrap = document.createElement('div');
+          wrap.style.marginBottom = '12px';
+          wrap.innerHTML = `<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span class="mono">${escapeHtml(model)}</span><span class="mono" style="color:var(--text-muted);">${(d.input/1000).toFixed(0)}k in / ${(d.output/1000).toFixed(0)}k out</span></div><div style="height:6px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--purple));border-radius:3px;"></div></div>`;
+          tokenBreakdownEl.appendChild(wrap);
+        });
+    }
 
     const modelColors = {'claude-opus-4-6':'var(--accent)','claude-opus-4-5':'var(--purple)','claude-sonnet-4-5':'var(--cyan)','gemini-3-pro-preview':'var(--yellow)','gemini-2.5-flash':'var(--green)'};
     const uniqueSessions = [];
@@ -2778,14 +2831,20 @@ window.runCronJob = async function(id) {
     sessions.sort((a,b) => b.updatedAt - a.updatedAt).forEach(s => {
       if (!seenLabels.has(s.label)) { seenLabels.add(s.label); uniqueSessions.push(s); }
     });
-    document.getElementById('sessionModels').innerHTML = uniqueSessions.map(s => {
-      const shortModel = s.model.split('/').pop();
-      const color = modelColors[shortModel] || 'var(--text-muted)';
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-        <span style="font-weight:500;font-size:13px;">${s.label}</span>
-        <span class="mono" style="font-size:11px;color:${color};background:${color}18;padding:2px 8px;border-radius:4px;">${shortModel}</span>
-      </div>`;
-    }).join('') || '<div class="empty-state-text">No sessions</div>';
+    const sessionModelsEl = document.getElementById('sessionModels');
+    if (!uniqueSessions.length) {
+      setEmptyState(sessionModelsEl, 'No sessions');
+    } else {
+      sessionModelsEl.innerHTML = '';
+      uniqueSessions.forEach(s => {
+        const shortModel = s.model.split('/').pop();
+        const color = modelColors[shortModel] || 'var(--text-muted)';
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);';
+        row.innerHTML = `<span style="font-weight:500;font-size:13px;">${escapeHtml(s.label)}</span><span class="mono" style="font-size:11px;color:${color};background:${color}18;padding:2px 8px;border-radius:4px;">${escapeHtml(shortModel)}</span>`;
+        sessionModelsEl.appendChild(row);
+      });
+    }
 
     const rtVal = rt.avgSeconds;
     document.getElementById('avgResponseTime').textContent = rtVal > 0 ? rtVal + 's' : '--';
@@ -2806,19 +2865,24 @@ function renderMemoryFilesList() {
   const el = document.getElementById('memoryFilesList');
   if (!el) return;
   const now = Date.now();
-  el.innerHTML = memoryFiles.map(f => {
+  if (!memoryFiles.length) {
+    setEmptyState(el, 'No memory files');
+    return;
+  }
+  el.innerHTML = '';
+  memoryFiles.forEach(f => {
     const age = now - f.modified;
     const ago = age < 60000 ? 'just now' : age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
     const sizeKb = (f.size / 1024).toFixed(1);
     const icon = f.name.includes('MEMORY') ? '🧠' : f.name.includes('HEARTBEAT') ? '💓' : '📄';
-    return `<div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.2s;" onclick="window.loadMemoryFile('${encodeURIComponent(f.name)}')" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-        <span style="font-size:18px;">${icon}</span>
-        <span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(f.name)}</span>
-      </div>
-      <div style="font-size:11px;color:var(--text-muted);">${sizeKb} KB · ${escapeHtml(ago)}</div>
-    </div>`;
-  }).join('') || '<div class="empty-state-text">No memory files</div>';
+    const item = document.createElement('div');
+    item.style.cssText = 'padding:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.2s;';
+    item.onmouseover = () => { item.style.background = 'var(--bg-tertiary)'; };
+    item.onmouseout = () => { item.style.background = 'transparent'; };
+    item.onclick = () => window.loadMemoryFile(encodeURIComponent(f.name));
+    item.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="font-size:18px;">${icon}</span><span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(f.name)}</span></div><div style="font-size:11px;color:var(--text-muted);">${sizeKb} KB · ${escapeHtml(ago)}</div>`;
+    el.appendChild(item);
+  });
 }
 
 window.loadMemoryFile = async function(name) {
@@ -2860,20 +2924,25 @@ function renderKeyFilesList() {
   const el = document.getElementById('keyFilesList');
   if (!el) return;
   const now = Date.now();
-  el.innerHTML = keyFiles.map(f => {
+  if (!keyFiles.length) {
+    setEmptyState(el, 'No files found');
+    return;
+  }
+  el.innerHTML = '';
+  keyFiles.forEach(f => {
     const age = now - f.modified;
     const ago = age < 60000 ? 'just now' : age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
     const sizeKb = (f.size / 1024).toFixed(1);
     const icon = f.name.startsWith('skills/') ? '🎯' : f.name.endsWith('.service') ? '⚙️' : f.name.endsWith('.json') ? '🔧' : '📄';
     const isSelected = f.name === currentKeyFile;
-    return `<div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.2s;${isSelected ? 'background:var(--bg-tertiary);' : ''}" onclick="window.loadKeyFile('${encodeURIComponent(f.name)}')" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='${isSelected ? 'var(--bg-tertiary)' : 'transparent'}'">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-        <span style="font-size:18px;">${icon}</span>
-        <span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(f.name)}</span>
-      </div>
-      <div style="font-size:11px;color:var(--text-muted);">${sizeKb} KB · ${escapeHtml(ago)}</div>
-    </div>`;
-  }).join('') || '<div class="empty-state-text">No files found</div>';
+    const item = document.createElement('div');
+    item.style.cssText = `padding:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.2s;${isSelected ? 'background:var(--bg-tertiary);' : ''}`;
+    item.onmouseover = () => { item.style.background = 'var(--bg-tertiary)'; };
+    item.onmouseout = () => { item.style.background = isSelected ? 'var(--bg-tertiary)' : 'transparent'; };
+    item.onclick = () => window.loadKeyFile(encodeURIComponent(f.name));
+    item.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="font-size:18px;">${icon}</span><span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(f.name)}</span></div><div style="font-size:11px;color:var(--text-muted);">${sizeKb} KB · ${escapeHtml(ago)}</div>`;
+    el.appendChild(item);
+  });
 }
 
 window.loadKeyFile = async function(name) {
