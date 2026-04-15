@@ -38,6 +38,14 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function escapeJsString(value) {
+  return String(value || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
+}
+
 // Page Visibility API: pause polling when tab is hidden, resume when visible
 const _visibleIntervals = [];
 function visibleInterval(fn, ms) {
@@ -1012,7 +1020,13 @@ async function setupMFA() {
     
     if (res.ok && data.secret) {
       document.getElementById('mfaSecretDisplay').textContent = data.secret;
-      document.getElementById('qrCodeContainer').innerHTML = generateQRCode(data.otpauth_uri);
+      const qrCodeContainer = document.getElementById('qrCodeContainer');
+      if (qrCodeContainer) {
+        qrCodeContainer.innerHTML = '';
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = generateQRCode(data.otpauth_uri);
+        if (wrapper.firstElementChild) qrCodeContainer.appendChild(wrapper.firstElementChild);
+      }
       document.getElementById('mfaDisabledView').style.display = 'none';
       document.getElementById('mfaSetupView').style.display = 'block';
     } else {
@@ -1457,9 +1471,9 @@ function refreshExpandedMessages(key) {
         const roleColor = m.role === 'user' ? 'var(--blue)' : m.role === 'assistant' ? 'var(--green)' : 'var(--yellow)';
         const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'}) : '';
         return `<div style="padding:6px 0;border-bottom:1px solid var(--border);">
-          <span style="font-weight:600;color:${roleColor};text-transform:uppercase;font-size:10px;margin-right:8px;">${m.role}</span>
-          <span style="color:var(--text-muted);font-size:10px;">${time}</span>
-          <div style="color:var(--text-primary);line-height:1.4;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:2px;">${m.content.replace(/</g,'&lt;')}</div>
+          <span style="font-weight:600;color:${roleColor};text-transform:uppercase;font-size:10px;margin-right:8px;">${escapeHtml(m.role)}</span>
+          <span style="color:var(--text-muted);font-size:10px;">${escapeHtml(time)}</span>
+          <div style="color:var(--text-primary);line-height:1.4;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:2px;">${escapeHtml(m.content)}</div>
         </div>`;
       }).join('') || '<div style="color:var(--text-muted);">No messages</div>';
     }).catch(() => {});
@@ -2137,8 +2151,8 @@ function updateLimits() {
     return `
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;">
         <div>
-          <div class="mono" style="font-weight:600;">${shortModel}</div>
-          <div style="color:var(--text-muted);font-size:11px;">${call.ago}</div>
+          <div class="mono" style="font-weight:600;">${escapeHtml(shortModel)}</div>
+          <div style="color:var(--text-muted);font-size:11px;">${escapeHtml(call.ago)}</div>
         </div>
         <div style="text-align:right;">
           <div class="mono">${call.output.toLocaleString()} out</div>
@@ -2468,12 +2482,12 @@ function connectLiveFeed() {
       item.innerHTML = `
         <div class="feed-header-line">
           <div style="display:flex;align-items:center;gap:8px;">
-            <span style="background:${sessionColor};color:#fff;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:0.02em;">${sessionName}</span>
-            <span class="feed-role ${roleClass}">${roleLabel}</span>
+            <span style="background:${sessionColor};color:#fff;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:0.02em;">${escapeHtml(sessionName)}</span>
+            <span class="feed-role ${roleClass}">${escapeHtml(roleLabel)}</span>
           </div>
-          <span class="feed-time">${time}</span>
+          <span class="feed-time">${escapeHtml(time)}</span>
         </div>
-        <div class="feed-content">${(data.content || '').replace(/</g,'&lt;')}</div>
+        <div class="feed-content">${escapeHtml(data.content || '')}</div>
       `;
       
       feed.insertBefore(item, feed.firstChild);
@@ -2586,8 +2600,8 @@ async function fetchNewData() {
       const textColor = s.active === null ? 'var(--text-muted)' : (s.active ? 'var(--green)' : 'var(--red)');
       return `<div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:${border};">
         <span style="width:10px;height:10px;border-radius:50%;background:${dotColor};flex-shrink:0;"></span>
-        <span style="font-weight:600;font-size:14px;">${s.name}</span>
-        <span style="margin-left:auto;font-size:12px;color:${textColor};">${status}</span>
+        <span style="font-weight:600;font-size:14px;">${escapeHtml(s.name)}</span>
+        <span style="margin-left:auto;font-size:12px;color:${textColor};">${escapeHtml(status)}</span>
       </div>`;
     }).join('') || '<div class="empty-state-text">No services</div>';
 
@@ -2599,12 +2613,12 @@ async function fetchNewData() {
       const toggleBg = c.enabled ? 'rgba(16,185,129,0.2)' : 'var(--bg-tertiary)';
       return `<div style="padding:10px 0;border-bottom:1px solid var(--border);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <span style="font-weight:600;font-size:13px;flex:1;">${statusIcon} ${c.name}</span>
-          <button onclick="window.toggleCronJob('${c.id}')" style="padding:2px 8px;background:${toggleBg};color:${toggleColor};border:1px solid var(--border);border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;margin-right:4px;">${c.enabled ? 'ON' : 'OFF'}</button>
-          <button onclick="window.runCronJob('${c.id}')" style="padding:2px 8px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;">▶</button>
+          <span style="font-weight:600;font-size:13px;flex:1;">${statusIcon} ${escapeHtml(c.name)}</span>
+          <button onclick="window.toggleCronJob('${escapeJsString(c.id)}')" style="padding:2px 8px;background:${toggleBg};color:${toggleColor};border:1px solid var(--border);border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;margin-right:4px;">${c.enabled ? 'ON' : 'OFF'}</button>
+          <button onclick="window.runCronJob('${escapeJsString(c.id)}')" style="padding:2px 8px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;">▶</button>
         </div>
-        <span class="mono" style="font-size:11px;color:var(--text-muted);">${c.schedule}</span>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Next: ${c.enabled ? nextAgo : 'disabled'} · Last: ${c.lastDuration ? (c.lastDuration / 1000).toFixed(0) + 's' : '--'}</div>
+        <span class="mono" style="font-size:11px;color:var(--text-muted);">${escapeHtml(c.schedule)}</span>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Next: ${escapeHtml(c.enabled ? nextAgo : 'disabled')} · Last: ${c.lastDuration ? (c.lastDuration / 1000).toFixed(0) + 's' : '--'}</div>
       </div>`;
     }).join('') || '<div class="empty-state-text">No cron jobs</div>';
 
@@ -2657,10 +2671,10 @@ window.runCronJob = async function(id) {
       const age = now - c.timestamp;
       const ago = age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
       return `<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;">
-        <span class="mono" style="color:var(--accent);flex-shrink:0;">${c.hash}</span>
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.message}</span>
-        <span style="flex-shrink:0;color:var(--text-muted);">${c.repo}</span>
-        <span style="flex-shrink:0;color:var(--text-muted);">${ago}</span>
+        <span class="mono" style="color:var(--accent);flex-shrink:0;">${escapeHtml(c.hash)}</span>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.message)}</span>
+        <span style="flex-shrink:0;color:var(--text-muted);">${escapeHtml(c.repo)}</span>
+        <span style="flex-shrink:0;color:var(--text-muted);">${escapeHtml(ago)}</span>
       </div>`;
     }).join('') || '<div class="empty-state-text">No recent commits</div>';
 
@@ -2669,8 +2683,8 @@ window.runCronJob = async function(id) {
       const age = now - f.modified;
       const ago = age < 60000 ? 'just now' : age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
       return `<div class="mem-file-item" style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);${idx >= memLimit ? 'display:none;' : ''}">
-        <span class="mono" style="font-size:13px;">📄 ${f.name}</span>
-        <span style="font-size:12px;color:var(--text-muted);">${ago}</span>
+        <span class="mono" style="font-size:13px;">📄 ${escapeHtml(f.name)}</span>
+        <span style="font-size:12px;color:var(--text-muted);">${escapeHtml(ago)}</span>
       </div>`;
     }).join('') || '<div class="empty-state-text">No files</div>';
     const showMoreBtn = memFiles.length > memLimit ? `<div id="memShowMore" style="text-align:center;padding:10px 0;cursor:pointer;color:var(--accent);font-size:13px;font-weight:500;" onclick="document.querySelectorAll('.mem-file-item').forEach(e=>e.style.display='flex');this.style.display='none';">Show all (${memFiles.length} files) ↓</div>` : '';
@@ -2688,7 +2702,7 @@ window.runCronJob = async function(id) {
         const pct = (total / maxTok) * 100;
         return `<div style="margin-bottom:12px;">
           <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
-            <span class="mono">${model}</span>
+            <span class="mono">${escapeHtml(model)}</span>
             <span class="mono" style="color:var(--text-muted);">${(d.input/1000).toFixed(0)}k in / ${(d.output/1000).toFixed(0)}k out</span>
           </div>
           <div style="height:6px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
@@ -2736,26 +2750,26 @@ function renderMemoryFilesList() {
     const ago = age < 60000 ? 'just now' : age < 3600000 ? Math.round(age/60000)+'m ago' : age < 86400000 ? Math.round(age/3600000)+'h ago' : Math.round(age/86400000)+'d ago';
     const sizeKb = (f.size / 1024).toFixed(1);
     const icon = f.name.includes('MEMORY') ? '🧠' : f.name.includes('HEARTBEAT') ? '💓' : '📄';
-    return `<div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.2s;" onclick="window.loadMemoryFile('${f.name}')" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">
+    return `<div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.2s;" onclick="window.loadMemoryFile('${encodeURIComponent(f.name)}')" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
         <span style="font-size:18px;">${icon}</span>
-        <span style="font-weight:600;font-size:13px;flex:1;">${f.name}</span>
+        <span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(f.name)}</span>
       </div>
-      <div style="font-size:11px;color:var(--text-muted);">${sizeKb} KB · ${ago}</div>
+      <div style="font-size:11px;color:var(--text-muted);">${sizeKb} KB · ${escapeHtml(ago)}</div>
     </div>`;
   }).join('') || '<div class="empty-state-text">No memory files</div>';
 }
 
 window.loadMemoryFile = async function(name) {
   try {
+    name = decodeURIComponent(name);
     const titleEl = document.getElementById('memoryFileTitle');
     const contentEl = document.getElementById('memoryFileContent');
     titleEl.textContent = name;
     contentEl.innerHTML = '<div style="color:var(--text-muted);">Loading...</div>';
     const res = await authFetch(API_BASE + '/api/memory-file?path=' + encodeURIComponent(name));
     const content = await res.text();
-    let html = content
-      .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    let html = escapeHtml(content)
       .replace(/^### (.+)$/gm, '<div style="font-size:16px;font-weight:700;color:var(--accent);margin:16px 0 8px;">$1</div>')
       .replace(/^## (.+)$/gm, '<div style="font-size:18px;font-weight:700;color:var(--accent);margin:20px 0 12px;">$1</div>')
       .replace(/^# (.+)$/gm, '<div style="font-size:20px;font-weight:700;color:var(--accent);margin:24px 0 16px;">$1</div>')
@@ -2791,17 +2805,18 @@ function renderKeyFilesList() {
     const sizeKb = (f.size / 1024).toFixed(1);
     const icon = f.name.startsWith('skills/') ? '🎯' : f.name.endsWith('.service') ? '⚙️' : f.name.endsWith('.json') ? '🔧' : '📄';
     const isSelected = f.name === currentKeyFile;
-    return `<div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.2s;${isSelected ? 'background:var(--bg-tertiary);' : ''}" onclick="window.loadKeyFile('${f.name.replace(/'/g, "\\'")}')" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='${isSelected ? 'var(--bg-tertiary)' : 'transparent'}'">
+    return `<div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.2s;${isSelected ? 'background:var(--bg-tertiary);' : ''}" onclick="window.loadKeyFile('${encodeURIComponent(f.name)}')" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='${isSelected ? 'var(--bg-tertiary)' : 'transparent'}'">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
         <span style="font-size:18px;">${icon}</span>
-        <span style="font-weight:600;font-size:13px;flex:1;">${f.name}</span>
+        <span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(f.name)}</span>
       </div>
-      <div style="font-size:11px;color:var(--text-muted);">${sizeKb} KB · ${ago}</div>
+      <div style="font-size:11px;color:var(--text-muted);">${sizeKb} KB · ${escapeHtml(ago)}</div>
     </div>`;
   }).join('') || '<div class="empty-state-text">No files found</div>';
 }
 
 window.loadKeyFile = async function(name) {
+  name = decodeURIComponent(name);
   currentKeyFile = name;
   keyFileEditing = false;
   const titleEl = document.getElementById('keyFileTitle');
@@ -2828,8 +2843,7 @@ window.loadKeyFile = async function(name) {
     _currentKeyFileRaw = content;
 
     if (name.endsWith('.md')) {
-      let html = content
-        .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      let html = escapeHtml(content)
         .replace(/^### (.+)$/gm, '<div style="font-size:16px;font-weight:700;color:var(--accent);margin:16px 0 8px;">$1</div>')
         .replace(/^## (.+)$/gm, '<div style="font-size:18px;font-weight:700;color:var(--accent);margin:20px 0 12px;">$1</div>')
         .replace(/^# (.+)$/gm, '<div style="font-size:20px;font-weight:700;color:var(--accent);margin:24px 0 16px;">$1</div>')
@@ -2837,7 +2851,7 @@ window.loadKeyFile = async function(name) {
         .replace(/`([^`]+)`/g, '<code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:4px;font-size:11px;">$1</code>');
       contentEl.innerHTML = html;
     } else {
-      contentEl.innerHTML = '<pre style="white-space:pre-wrap;word-wrap:break-word;">' + content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+      contentEl.innerHTML = '<pre style="white-space:pre-wrap;word-wrap:break-word;">' + escapeHtml(content) + '</pre>';
     }
   } catch (e) {
     contentEl.innerHTML = '<div style="color:var(--red);">Failed to load file</div>';
@@ -2992,10 +3006,10 @@ function clearFeedSearch() {
 }
 
 function highlightText(text, term) {
-  if (!term) return text;
+  if (!term) return escapeHtml(text);
   const idx = text.toLowerCase().indexOf(term);
-  if (idx === -1) return text;
-  return text.substring(0, idx) + '<span class="search-highlight">' + text.substring(idx, idx + term.length) + '</span>' + text.substring(idx + term.length);
+  if (idx === -1) return escapeHtml(text);
+  return escapeHtml(text.substring(0, idx)) + '<span class="search-highlight">' + escapeHtml(text.substring(idx, idx + term.length)) + '</span>' + escapeHtml(text.substring(idx + term.length));
 }
 
 // Session comparison
@@ -3107,11 +3121,11 @@ function openSessionDetail(key) {
   const isActive = age < 300000 && !s.aborted;
   document.getElementById('modalStats').innerHTML = `
     <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Status</div><div style="font-weight:600;color:${isActive ? 'var(--green)' : 'var(--text-primary)'}">${isActive ? '🟢 Active' : s.aborted ? '🔴 Aborted' : '⚪ Idle'}</div></div>
-    <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Model</div><div class="mono" style="font-size:13px;">${s.model.split('/').pop()}</div></div>
+    <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Model</div><div class="mono" style="font-size:13px;">${escapeHtml(s.model.split('/').pop())}</div></div>
     <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Tokens</div><div class="mono" style="font-size:13px;">${(s.totalTokens||0).toLocaleString()}</div></div>
     <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Cost</div><div class="mono" style="font-size:13px;">$${(s.cost||0).toFixed(2)}</div></div>
-    <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Last Active</div><div style="font-size:13px;">${ago}</div></div>
-    <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Channel</div><div style="font-size:13px;">${s.channel || '--'}</div></div>`;
+    <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Last Active</div><div style="font-size:13px;">${escapeHtml(ago)}</div></div>
+    <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Channel</div><div style="font-size:13px;">${escapeHtml(s.channel || '--')}</div></div>`;
   document.getElementById('modalMessages').innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading...</div>';
   document.getElementById('sessionModal').style.display = 'flex';
   authFetch(API_BASE + '/api/session-messages?id=' + encodeURIComponent(s.sessionId || s.key))
@@ -3122,10 +3136,10 @@ function openSessionDetail(key) {
         const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : '';
         return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;">
           <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-            <span style="font-weight:600;color:${roleColor};text-transform:uppercase;font-size:10px;">${m.role}</span>
-            <span style="color:var(--text-muted);font-size:10px;">${time}</span>
+            <span style="font-weight:600;color:${roleColor};text-transform:uppercase;font-size:10px;">${escapeHtml(m.role)}</span>
+            <span style="color:var(--text-muted);font-size:10px;">${escapeHtml(time)}</span>
           </div>
-          <div style="color:var(--text-primary);line-height:1.4;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;">${m.content.replace(/</g,'&lt;')}</div>
+          <div style="color:var(--text-primary);line-height:1.4;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;">${escapeHtml(m.content)}</div>
         </div>`;
       }).join('') || '<div style="color:var(--text-muted);font-size:13px;">No messages found</div>';
     }).catch(() => {
@@ -3785,7 +3799,7 @@ async function fetchNotifications() {
       const time = e.timestamp ? new Date(e.timestamp).toLocaleString() : '';
       const detail = e.username ? ' (' + e.username + ')' : '';
       const ip = e.ip ? ' from ' + e.ip : '';
-      return '<div class="notif-item"><div class="notif-icon">' + icon + '</div><div class="notif-content"><div class="notif-event">' + (notifLabels[e.event] || (e.event||'').replace(/_/g, ' ')) + detail + ip + '</div><div class="notif-time">' + time + '</div></div></div>';
+      return '<div class="notif-item"><div class="notif-icon">' + icon + '</div><div class="notif-content"><div class="notif-event">' + escapeHtml((notifLabels[e.event] || (e.event||'').replace(/_/g, ' ')) + detail + ip) + '</div><div class="notif-time">' + escapeHtml(time) + '</div></div></div>';
     }).join('');
     if (data.events.length) {
       notifLastSeen = data.events[0].timestamp;
