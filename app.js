@@ -2644,7 +2644,7 @@ function applyFeedFilter() {
         }
       }
     }
-    el.style.display = (matchSession && matchRole && matchSearch) ? '' : 'none';
+    el.classList.toggle('ui-hidden', !(matchSession && matchRole && matchSearch));
   });
 }
 
@@ -2725,7 +2725,7 @@ function connectLiveFeed() {
       item.className = `feed-item role-${roleClass}`;
       item.dataset.session = sessionName;
       item.dataset.role = roleClass;
-      if (!visible) item.style.display = 'none';
+      item.classList.toggle('ui-hidden', !visible);
 
       const header = document.createElement('div');
       header.className = 'feed-header-line';
