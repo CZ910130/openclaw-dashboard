@@ -1017,6 +1017,70 @@ function initAuthUi() {
       }
     });
   }
+
+  const registerForm = document.getElementById('registerForm');
+  if (registerForm && registerForm.dataset.boundSubmit !== 'true') {
+    registerForm.dataset.boundSubmit = 'true';
+    registerForm.addEventListener('submit', handleRegister);
+  }
+
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm && loginForm.dataset.boundSubmit !== 'true') {
+    loginForm.dataset.boundSubmit = 'true';
+    loginForm.addEventListener('submit', handleLogin);
+  }
+
+  const recoveryForm = document.getElementById('recoveryForm');
+  if (recoveryForm && recoveryForm.dataset.boundSubmit !== 'true') {
+    recoveryForm.dataset.boundSubmit = 'true';
+    recoveryForm.addEventListener('submit', handleRecovery);
+  }
+
+  const changePasswordForm = document.getElementById('changePasswordForm');
+  if (changePasswordForm && changePasswordForm.dataset.boundSubmit !== 'true') {
+    changePasswordForm.dataset.boundSubmit = 'true';
+    changePasswordForm.addEventListener('submit', handleChangePassword);
+  }
+
+  const showRecoveryLink = document.getElementById('showRecoveryLink');
+  if (showRecoveryLink && showRecoveryLink.dataset.boundClick !== 'true') {
+    showRecoveryLink.dataset.boundClick = 'true';
+    showRecoveryLink.addEventListener('click', (event) => {
+      event.preventDefault();
+      showRecoveryForm();
+    });
+  }
+
+  const backToLoginBtn = document.getElementById('backToLoginBtn');
+  if (backToLoginBtn && backToLoginBtn.dataset.boundClick !== 'true') {
+    backToLoginBtn.dataset.boundClick = 'true';
+    backToLoginBtn.addEventListener('click', showLoginForm);
+  }
+
+  const logoutNavItem = document.getElementById('logoutNavItem');
+  if (logoutNavItem && logoutNavItem.dataset.boundClick !== 'true') {
+    logoutNavItem.dataset.boundClick = 'true';
+    logoutNavItem.addEventListener('click', handleLogout);
+    logoutNavItem.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        handleLogout();
+      }
+    });
+  }
+
+  [
+    ['enableMfaBtn', setupMFA],
+    ['disableMfaBtn', disableMFA],
+    ['confirmMfaBtn', confirmMFASetup],
+    ['cancelMfaSetupBtn', cancelMFASetup]
+  ].forEach(([id, fn]) => {
+    const btn = document.getElementById(id);
+    if (btn && btn.dataset.boundClick !== 'true') {
+      btn.dataset.boundClick = 'true';
+      btn.addEventListener('click', fn);
+    }
+  });
 }
 
 function beginAuthBootstrap() {

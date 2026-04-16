@@ -51,7 +51,7 @@ function initAppUi() {
   }
 
   document.querySelectorAll('.nav-item').forEach(item => {
-    if (item.dataset.boundNav === 'true') return;
+    if (!item.dataset.page || item.dataset.boundNav === 'true') return;
     item.dataset.boundNav = 'true';
     item.addEventListener('click', () => activatePage(item.dataset.page));
   });
@@ -107,6 +107,54 @@ function initAppUi() {
     pauseBtn.dataset.boundPause = 'true';
     pauseBtn.addEventListener('click', toggleFeedPause);
   }
+
+  const overviewScrapeBtn = document.getElementById('overviewScrapeBtn');
+  if (overviewScrapeBtn && overviewScrapeBtn.dataset.boundClick !== 'true') {
+    overviewScrapeBtn.dataset.boundClick = 'true';
+    overviewScrapeBtn.addEventListener('click', scrapeCurrentProvider);
+  }
+
+  const usageAutoRefresh = document.getElementById('usageAutoRefresh');
+  if (usageAutoRefresh && usageAutoRefresh.dataset.boundChange !== 'true') {
+    usageAutoRefresh.dataset.boundChange = 'true';
+    usageAutoRefresh.addEventListener('change', (event) => toggleUsageAutoRefresh(event.target.checked));
+  }
+
+  document.querySelectorAll('#providerSwitch [data-provider]').forEach(btn => {
+    if (btn.dataset.boundClick === 'true') return;
+    btn.dataset.boundClick = 'true';
+    btn.addEventListener('click', () => switchProvider(btn.dataset.provider));
+  });
+
+  const modelSelect = document.getElementById('modelSelect');
+  if (modelSelect && modelSelect.dataset.boundChange !== 'true') {
+    modelSelect.dataset.boundChange = 'true';
+    modelSelect.addEventListener('change', (event) => switchModel(event.target.value));
+  }
+
+  document.querySelectorAll('[data-quick-action]').forEach(btn => {
+    if (btn.dataset.boundClick === 'true') return;
+    btn.dataset.boundClick = 'true';
+    btn.addEventListener('click', (event) => quickAction(btn.dataset.quickAction, event));
+  });
+
+  const quickScrapeClaudeBtn = document.getElementById('quickScrapeClaudeBtn');
+  if (quickScrapeClaudeBtn && quickScrapeClaudeBtn.dataset.boundClick !== 'true') {
+    quickScrapeClaudeBtn.dataset.boundClick = 'true';
+    quickScrapeClaudeBtn.addEventListener('click', scrapeClaudeUsage);
+  }
+
+  [
+    ['scrapeBtn', scrapeClaudeUsage],
+    ['openaiScrapeBtn', scrapeOpenAIUsage],
+    ['opencodeGoScrapeBtn', scrapeOpenCodeGoUsage]
+  ].forEach(([id, fn]) => {
+    const btn = document.getElementById(id);
+    if (btn && btn.dataset.boundClick !== 'true') {
+      btn.dataset.boundClick = 'true';
+      btn.addEventListener('click', fn);
+    }
+  });
 }
 
 async function fetchData() {

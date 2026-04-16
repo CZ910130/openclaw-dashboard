@@ -192,14 +192,6 @@ function cancelReauth() {
   document.querySelector('[data-page="overview"]').click();
 }
 
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
-    if (item.dataset.page === 'sys-security' && sysSecAuthed) fetchSysSecurity();
-    if (item.dataset.page === 'config-editor' && sysSecAuthed) loadConfig();
-    if (item.dataset.page === 'docker') loadDocker();
-  });
-});
-
 async function loadDocker() {
   try {
     const res = await authFetch(API_BASE + '/api/docker');
@@ -395,7 +387,54 @@ function initSystemUi() {
   if (!document.body.dataset.boundSystemUi) {
     document.body.dataset.boundSystemUi = 'true';
     document.addEventListener('click', handleNotifPanelOutsideClick);
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        if (item.dataset.page === 'sys-security' && sysSecAuthed) fetchSysSecurity();
+        if (item.dataset.page === 'config-editor' && sysSecAuthed) loadConfig();
+        if (item.dataset.page === 'docker') loadDocker();
+      });
+    });
   }
+
+  [document.getElementById('themeToggle'), document.getElementById('themeToggleMobile')].forEach(btn => {
+    if (btn && btn.dataset.boundClick !== 'true') {
+      btn.dataset.boundClick = 'true';
+      btn.addEventListener('click', toggleTheme);
+    }
+  });
+
+  [
+    document.getElementById('notificationBell'),
+    document.getElementById('notificationBellMobile'),
+    document.getElementById('notifPanelCloseBtn')
+  ].forEach(btn => {
+    if (btn && btn.dataset.boundClick !== 'true') {
+      btn.dataset.boundClick = 'true';
+      btn.addEventListener('click', toggleNotifPanel);
+    }
+  });
+
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  if (mobileMenuBtn && mobileMenuBtn.dataset.boundClick !== 'true') {
+    mobileMenuBtn.dataset.boundClick = 'true';
+    mobileMenuBtn.addEventListener('click', toggleMobileSidebar);
+  }
+
+  [
+    ['configReloadBtn', loadConfig],
+    ['configSaveBtn', saveConfig],
+    ['dockerRefreshBtn', loadDocker],
+    ['dockerPruneContainersBtn', () => dockerAction('prune-containers')],
+    ['dockerPruneImagesBtn', () => dockerAction('prune-images')]
+  ].forEach(([id, fn]) => {
+    const btn = document.getElementById(id);
+    if (btn && btn.dataset.boundClick !== 'true') {
+      btn.dataset.boundClick = 'true';
+      btn.addEventListener('click', fn);
+    }
+  });
+
   visibleInterval(checkNewNotifications, 30000);
   setTimeout(checkNewNotifications, 3000);
 }

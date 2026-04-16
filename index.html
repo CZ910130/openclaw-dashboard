@@ -14,16 +14,16 @@
 <!-- Mobile Top Bar -->
 <header class="top-bar" role="banner">
   <div class="top-bar-left">
-    <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidebar">☰</button>
+    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidebar">☰</button>
     <span class="brand top-bar-brand">Agent</span>
   </div>
   <div class="top-bar-right">
-    <button id="themeToggleMobile" onclick="toggleTheme()" aria-label="Toggle dark/light theme">🌙</button>
-    <button class="notification-bell" id="notificationBellMobile" onclick="toggleNotifPanel()" aria-label="Notifications" aria-expanded="false" aria-controls="notifPanel">🔔<span class="notification-badge" id="notifBadgeMobile" aria-live="polite">0</span></button>
+    <button id="themeToggleMobile" aria-label="Toggle dark/light theme">🌙</button>
+    <button class="notification-bell" id="notificationBellMobile" aria-label="Notifications" aria-expanded="false" aria-controls="notifPanel">🔔<span class="notification-badge" id="notifBadgeMobile" aria-live="polite">0</span></button>
   </div>
 </header>
 
-<button id="themeToggle" onclick="toggleTheme()" aria-label="Toggle dark/light theme">🌙</button>
+<button id="themeToggle" aria-label="Toggle dark/light theme">🌙</button>
 
 <div id="loginPage" class="auth-overlay app-hidden" role="dialog" aria-label="Authentication">
   <div class="auth-panel">
@@ -33,7 +33,7 @@
       <p class="auth-subtitle" id="authSubtitle">Enter your credentials</p>
     </div>
     
-    <form id="registerForm" class="auth-form auth-form-hidden" onsubmit="return handleRegister(event)">
+    <form id="registerForm" class="auth-form auth-form-hidden">
       <div class="form-field">
         <input type="text" id="regUsername" placeholder="Username" class="form-input" autocomplete="username" required>
       </div>
@@ -53,7 +53,7 @@
       <button type="submit" id="registerBtn" class="auth-submit-btn">Create Account</button>
     </form>
     
-    <form id="loginForm" class="auth-form auth-form-hidden" onsubmit="return handleLogin(event)">
+    <form id="loginForm" class="auth-form auth-form-hidden">
       <div class="form-field" id="usernameInputContainer">
         <input type="text" id="username" placeholder="Username" class="form-input" autocomplete="username" required>
       </div>
@@ -70,11 +70,11 @@
       <div id="loginError" class="form-error auth-form-hidden"></div>
       <button type="submit" id="loginBtn" class="auth-submit-btn">Login</button>
       <div class="auth-link-row">
-        <a href="#" onclick="showRecoveryForm();return false;" class="auth-link">Forgot password?</a>
+        <a href="#" id="showRecoveryLink" class="auth-link">Forgot password?</a>
       </div>
     </form>
     
-    <form id="recoveryForm" class="auth-form auth-form-hidden" onsubmit="return handleRecovery(event)">
+    <form id="recoveryForm" class="auth-form auth-form-hidden">
       <div class="form-field">
         <input type="text" id="recoveryToken" placeholder="Recovery Token" class="form-input form-input-mono" required>
         <div class="form-helper-text">Check your server console or environment variables</div>
@@ -87,7 +87,7 @@
       </div>
       <div id="recoveryError" class="form-error auth-form-hidden"></div>
       <button type="submit" id="recoveryBtn" class="auth-submit-btn auth-submit-btn-spaced">Reset Password</button>
-      <button type="button" onclick="showLoginForm()" class="auth-secondary-btn">← Back to Login</button>
+      <button type="button" id="backToLoginBtn" class="auth-secondary-btn">← Back to Login</button>
     </form>
   </div>
 </div>
@@ -150,7 +150,7 @@
     </nav>
     <div class="sidebar-footer">
       <div id="mfaStatusIndicator" class="mfa-status-indicator auth-form-hidden" role="status"></div>
-      <div class="nav-item nav-item-danger" onclick="handleLogout()" role="button" tabindex="0">
+      <div class="nav-item nav-item-danger" id="logoutNavItem" role="button" tabindex="0">
         <span class="icon" aria-hidden="true">🚪</span>
         <span class="nav-text">Logout</span>
       </div>
@@ -185,10 +185,10 @@
             <div class="overview-usage-header">
               <div class="metric-value" id="ovSessionPct">--%</div>
               <span id="overviewUsageWarn" class="overview-usage-warn">⚠️</span>
-              <button onclick="scrapeCurrentProvider()" id="overviewScrapeBtn" title="Refresh now" class="overview-refresh-btn">⟳</button>
+              <button id="overviewScrapeBtn" title="Refresh now" class="overview-refresh-btn">⟳</button>
               <div class="usage-auto-wrap">
                 <label class="usage-toggle" title="Auto-refresh usage every 2 min">
-                  <input type="checkbox" id="usageAutoRefresh" onchange="toggleUsageAutoRefresh(this.checked)" class="usage-toggle-input">
+                  <input type="checkbox" id="usageAutoRefresh" class="usage-toggle-input">
                   <span class="usage-toggle-track" id="usageToggleTrack"></span>
                   <span class="usage-toggle-thumb" id="usageToggleThumb"></span>
                 </label>
@@ -196,13 +196,13 @@
               </div>
               <span class="usage-source-note">Usage source</span>
               <div id="providerSwitch">
-                <button onclick="switchProvider('claude')" id="provBtnClaude" class="provider-switch-btn provider-switch-btn-active">Claude API</button>
-                <button onclick="switchProvider('openai')" id="provBtnOpenAI" class="provider-switch-btn">ChatGPT</button>
-                <button onclick="switchProvider('opencode-go')" id="provBtnOpenCodeGo" class="provider-switch-btn">OpenCode-Go</button>
+                <button id="provBtnClaude" data-provider="claude" class="provider-switch-btn provider-switch-btn-active">Claude API</button>
+                <button id="provBtnOpenAI" data-provider="openai" class="provider-switch-btn">ChatGPT</button>
+                <button id="provBtnOpenCodeGo" data-provider="opencode-go" class="provider-switch-btn">OpenCode-Go</button>
               </div>
             </div>
             <div class="overview-model-row">
-              <select id="modelSelect" onchange="switchModel(this.value)" class="overview-model-select"></select>
+              <select id="modelSelect" class="overview-model-select"></select>
               <span class="metric-label overview-usage-label" id="overviewUsageLabel"></span>
             </div>
             <div class="overview-session-track">
@@ -308,18 +308,18 @@
         <div class="card">
           <h3 class="card-title">Quick Actions</h3>
           <div class="quick-actions-grid">
-            <button onclick="quickAction('restart-openclaw', event)" class="qa-btn qa-danger">🔄 Restart OpenClaw</button>
-            <button onclick="quickAction('restart-dashboard', event)" class="qa-btn">🔄 Restart Dashboard</button>
-            <button onclick="quickAction('clear-cache', event)" class="qa-btn">🗑️ Clear Cache</button>
-            <button onclick="scrapeClaudeUsage()" class="qa-btn">📊 Usage Scrape</button>
-            <button onclick="quickAction('restart-tailscale', event)" class="qa-btn">🌐 Restart Tailscale</button>
-            <button onclick="quickAction('update-openclaw', event)" class="qa-btn qa-danger">⬆️ Update OpenClaw</button>
-            <button onclick="quickAction('kill-tmux', event)" class="qa-btn">🧹 Kill Tmux Sessions</button>
-            <button onclick="quickAction('gc', event)" class="qa-btn">♻️ Git GC All</button>
-            <button onclick="quickAction('check-update', event)" class="qa-btn">🔍 Check Updates</button>
-            <button onclick="quickAction('sys-update', event)" class="qa-btn qa-danger">📦 Apt Update</button>
-            <button onclick="quickAction('disk-cleanup', event)" class="qa-btn">💾 Disk Cleanup</button>
-            <button onclick="quickAction('restart-claude', event)" class="qa-btn">🤖 Restart Claude Tmux</button>
+            <button data-quick-action="restart-openclaw" class="qa-btn qa-danger">🔄 Restart OpenClaw</button>
+            <button data-quick-action="restart-dashboard" class="qa-btn">🔄 Restart Dashboard</button>
+            <button data-quick-action="clear-cache" class="qa-btn">🗑️ Clear Cache</button>
+            <button id="quickScrapeClaudeBtn" class="qa-btn">📊 Usage Scrape</button>
+            <button data-quick-action="restart-tailscale" class="qa-btn">🌐 Restart Tailscale</button>
+            <button data-quick-action="update-openclaw" class="qa-btn qa-danger">⬆️ Update OpenClaw</button>
+            <button data-quick-action="kill-tmux" class="qa-btn">🧹 Kill Tmux Sessions</button>
+            <button data-quick-action="gc" class="qa-btn">♻️ Git GC All</button>
+            <button data-quick-action="check-update" class="qa-btn">🔍 Check Updates</button>
+            <button data-quick-action="sys-update" class="qa-btn qa-danger">📦 Apt Update</button>
+            <button data-quick-action="disk-cleanup" class="qa-btn">💾 Disk Cleanup</button>
+            <button data-quick-action="restart-claude" class="qa-btn">🤖 Restart Claude Tmux</button>
           </div>
         </div>
         <div class="card">
@@ -477,7 +477,7 @@
           <h3 class="card-title usage-card-title">Claude Code Usage (Anthropic)</h3>
           <div class="usage-card-actions">
             <span class="usage-card-scraped-at" id="claudeUsageScrapedAt">Not scraped yet</span>
-            <button onclick="scrapeClaudeUsage()" class="usage-card-refresh-btn" id="scrapeBtn">⟳ Refresh</button>
+            <button class="usage-card-refresh-btn" id="scrapeBtn">⟳ Refresh</button>
           </div>
         </div>
         <div class="usage-card-bars" id="claudeUsageBars">
@@ -604,7 +604,7 @@
           <h3 class="card-title usage-card-title">ChatGPT Usage (Local Sessions)</h3>
           <div class="usage-card-actions">
             <span class="usage-card-scraped-at" id="openaiUsageScrapedAt">Not scraped yet</span>
-            <button onclick="scrapeOpenAIUsage()" class="usage-card-refresh-btn" id="openaiScrapeBtn">⟳ Refresh</button>
+            <button class="usage-card-refresh-btn" id="openaiScrapeBtn">⟳ Refresh</button>
           </div>
         </div>
         <div class="usage-card-bars" id="openaiUsageBars">
@@ -627,7 +627,7 @@
           <h3 class="card-title usage-card-title">OpenCode-Go Usage (Local Sessions)</h3>
           <div class="usage-card-actions">
             <span class="usage-card-scraped-at" id="opencodeGoUsageScrapedAt">Not scraped yet</span>
-            <button onclick="scrapeOpenCodeGoUsage()" class="usage-card-refresh-btn" id="opencodeGoScrapeBtn">⟳ Refresh</button>
+            <button class="usage-card-refresh-btn" id="opencodeGoScrapeBtn">⟳ Refresh</button>
           </div>
         </div>
         <div class="usage-card-bars" id="opencodeGoUsageBars">
@@ -711,20 +711,20 @@
         <div class="feed-live-label">
           <span class="status-indicator"></span> Live
         </div>
-        <select id="feedSessionFilter" onchange="applyFeedFilter()" class="feed-select">
+        <select id="feedSessionFilter" class="feed-select">
           <option value="all">All Sessions</option>
         </select>
-        <select id="feedRoleFilter" onchange="applyFeedFilter()" class="feed-select">
+        <select id="feedRoleFilter" class="feed-select">
           <option value="all">All Roles</option>
           <option value="user">User</option>
           <option value="assistant">Assistant</option>
         </select>
         <div class="feed-search-wrap">
           <input type="text" id="feedSearchInput" placeholder="🔍 Search feed..." class="feed-search-input">
-          <button onclick="clearFeedSearch()" class="feed-search-clear">✕</button>
+          <button id="feedSearchClearBtn" class="feed-search-clear">✕</button>
         </div>
         <button class="pause-btn" id="pauseBtn">▶ Start</button>
-        <button onclick="document.getElementById('feedStream').innerHTML=''" class="feed-clear-btn">Clear</button>
+        <button id="feedClearBtn" class="feed-clear-btn">Clear</button>
       </div>
 
       <div class="card">
@@ -760,16 +760,16 @@
         <div class="card">
           <div class="section-toolbar">
             <h3 class="card-title section-toolbar-title">Key Files</h3>
-            <button onclick="window.fetchKeyFiles()" class="toolbar-btn toolbar-btn-sm">↻ Refresh</button>
+            <button id="keyFilesRefreshBtn" class="toolbar-btn toolbar-btn-sm">↻ Refresh</button>
           </div>
           <div id="keyFilesList" class="scroll-panel scroll-panel-572"></div>
         </div>
         <div class="card">
           <div class="section-toolbar section-toolbar-wrap">
             <h3 class="card-title section-toolbar-title" id="keyFileTitle">Select a file</h3>
-            <button id="keyFileEditBtn" onclick="window.editKeyFile()" class="toolbar-action-btn toolbar-action-btn-edit auth-form-hidden">Edit</button>
-            <button id="keyFileSaveBtn" onclick="window.saveKeyFile()" class="toolbar-action-btn toolbar-action-btn-save auth-form-hidden">Save</button>
-            <button id="keyFileCancelBtn" onclick="window.cancelEditKeyFile()" class="toolbar-action-btn toolbar-action-btn-cancel auth-form-hidden">Cancel</button>
+            <button id="keyFileEditBtn" class="toolbar-action-btn toolbar-action-btn-edit auth-form-hidden">Edit</button>
+            <button id="keyFileSaveBtn" class="toolbar-action-btn toolbar-action-btn-save auth-form-hidden">Save</button>
+            <button id="keyFileCancelBtn" class="toolbar-action-btn toolbar-action-btn-cancel auth-form-hidden">Cancel</button>
           </div>
           <div id="keyFileContent" class="code-scroll-panel code-scroll-panel-560"></div>
           <textarea id="keyFileEditor" class="code-editor auth-form-hidden"></textarea>
@@ -792,9 +792,9 @@
           </select>
           <input type="number" id="logLines" value="100" min="10" max="1000" step="10" class="logs-lines-input">
           <span class="logs-lines-label">lines</span>
-          <button onclick="fetchLogs()" class="logs-refresh-btn">🔄 Refresh</button>
+          <button id="logsRefreshBtn" class="logs-refresh-btn">🔄 Refresh</button>
           <label class="logs-auto-refresh">
-            <input type="checkbox" id="logAutoRefresh" onchange="toggleLogAutoRefresh(this.checked)" class="logs-auto-refresh-checkbox">
+            <input type="checkbox" id="logAutoRefresh" class="logs-auto-refresh-checkbox">
             <span class="logs-auto-refresh-label">Auto-refresh (5s)</span>
           </label>
         </div>
@@ -816,7 +816,7 @@
       <div class="card mb-24">
         <div class="card-title">🔑 Change Password</div>
         
-        <form onsubmit="return handleChangePassword(event)" class="security-form">
+        <form id="changePasswordForm" class="security-form">
           <div class="form-field">
             <input type="password" id="currentPassword" placeholder="Current Password" class="form-input" autocomplete="current-password" required>
           </div>
@@ -847,7 +847,7 @@
             Add an extra layer of security by enabling TOTP-based two-factor authentication. 
             You'll need an authenticator app like Google Authenticator or Authy.
           </p>
-          <button onclick="setupMFA()" id="enableMfaBtn" class="primary-action-btn primary-action-btn-green">
+          <button id="enableMfaBtn" class="primary-action-btn primary-action-btn-green">
             ✅ Enable MFA
           </button>
         </div>
@@ -862,7 +862,7 @@
               </div>
             </div>
           </div>
-          <button onclick="disableMFA()" id="disableMfaBtn" class="primary-action-btn primary-action-btn-red">
+          <button id="disableMfaBtn" class="primary-action-btn primary-action-btn-red">
             ⚠️ Disable MFA
           </button>
         </div>
@@ -881,10 +881,10 @@
             <input type="text" id="mfaVerifyCode" placeholder="000000" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" class="mfa-code-input">
             <div id="mfaVerifyError" class="form-inline-error auth-form-hidden"></div>
           </div>
-          <button onclick="confirmMFASetup()" id="confirmMfaBtn" class="primary-action-btn">
+          <button id="confirmMfaBtn" class="primary-action-btn">
             ✅ Verify & Enable
           </button>
-          <button onclick="cancelMFASetup()" class="secondary-action-btn secondary-action-btn-spaced">
+          <button id="cancelMfaSetupBtn" class="secondary-action-btn secondary-action-btn-spaced">
             Cancel
           </button>
         </div>
@@ -931,8 +931,8 @@
         <div class="section-toolbar section-toolbar-spread">
           <div class="card-title section-toolbar-title">📝 openclaw.json</div>
           <div class="toolbar-actions">
-            <button onclick="loadConfig()" class="toolbar-btn">↻ Reload</button>
-            <button onclick="saveConfig()" id="configSaveBtn" class="primary-toolbar-btn">💾 Save & Restart</button>
+            <button id="configReloadBtn" class="toolbar-btn">↻ Reload</button>
+            <button id="configSaveBtn" class="primary-toolbar-btn">💾 Save & Restart</button>
           </div>
         </div>
         <div id="configError" class="config-feedback config-feedback-error auth-form-hidden"></div>
@@ -951,8 +951,8 @@
         <div class="section-toolbar section-toolbar-spread">
           <div class="card-title section-toolbar-title">📦 Containers</div>
           <div class="toolbar-actions">
-            <button onclick="dockerAction('prune-containers')" class="toolbar-btn toolbar-btn-danger">🗑 Prune Stopped</button>
-            <button onclick="loadDocker()" class="toolbar-btn">↻ Refresh</button>
+            <button id="dockerPruneContainersBtn" class="toolbar-btn toolbar-btn-danger">🗑 Prune Stopped</button>
+            <button id="dockerRefreshBtn" class="toolbar-btn">↻ Refresh</button>
           </div>
         </div>
         <div id="dockerContainers" class="overflow-x-panel"><div class="loading-inline">Loading...</div></div>
@@ -961,7 +961,7 @@
         <div class="card">
           <div class="section-toolbar section-toolbar-spread">
             <div class="card-title section-toolbar-title">💿 Images</div>
-            <button onclick="dockerAction('prune-images')" class="toolbar-btn toolbar-btn-danger">🗑 Prune Unused</button>
+            <button id="dockerPruneImagesBtn" class="toolbar-btn toolbar-btn-danger">🗑 Prune Unused</button>
           </div>
           <div id="dockerImages" class="overflow-x-panel"><div class="loading-inline">Loading...</div></div>
         </div>
@@ -977,13 +977,13 @@
 
 <div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
 
-<button class="notification-bell" id="notificationBell" onclick="toggleNotifPanel()" aria-label="Notifications" aria-expanded="false" aria-controls="notifPanel">🔔<span class="notification-badge" id="notifBadge" aria-live="polite">0</span></button>
+<button class="notification-bell" id="notificationBell" aria-label="Notifications" aria-expanded="false" aria-controls="notifPanel">🔔<span class="notification-badge" id="notifBadge" aria-live="polite">0</span></button>
 <aside class="notif-panel" id="notifPanel" role="complementary" aria-label="Notification panel">
-  <div class="notif-panel-header"><span>Notifications</span><button onclick="toggleNotifPanel()" aria-label="Close notifications" class="icon-close-btn">✕</button></div>
+  <div class="notif-panel-header"><span>Notifications</span><button id="notifPanelCloseBtn" aria-label="Close notifications" class="icon-close-btn">✕</button></div>
   <div class="notif-panel-body" id="notifPanelBody"><div class="panel-empty-state">Loading...</div></div>
 </aside>
 
-<div class="shortcuts-overlay" id="shortcutsOverlay" role="dialog" aria-label="Keyboard shortcuts" onclick="if(event.target===this)toggleShortcuts()">
+<div class="shortcuts-overlay" id="shortcutsOverlay" role="dialog" aria-label="Keyboard shortcuts">
   <div class="shortcuts-panel">
     <h2 class="shortcuts-title">Keyboard Shortcuts</h2>
     <div class="shortcut-item"><span>Switch to Overview</span><span class="shortcut-key">1</span></div>
@@ -998,14 +998,14 @@
   </div>
 </div>
 
-<div class="session-modal-overlay" id="sessionModal" role="dialog" aria-label="Session details" onclick="if(event.target===this)closeSessionModal()">
+<div class="session-modal-overlay" id="sessionModal" role="dialog" aria-label="Session details">
   <div class="session-modal-panel">
     <div class="session-modal-header">
       <div>
         <h2 class="session-modal-title" id="modalTitle">Session</h2>
         <div class="session-modal-key" id="modalKey"></div>
       </div>
-      <button onclick="closeSessionModal()" class="session-modal-close-btn">✕</button>
+      <button id="sessionModalCloseBtn" class="session-modal-close-btn">✕</button>
     </div>
     <div class="session-modal-stats" id="modalStats"></div>
     <div class="session-modal-section"><h3 class="session-modal-section-title">Recent Messages</h3></div>

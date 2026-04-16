@@ -230,7 +230,7 @@ function updateOverview() {
       <div class="bar-item">
         <div class="bar-value">$${amount.toFixed(2)}</div>
         <div class="bar" style="height: ${h}px"></div>
-        <div class="bar-label">${label}</div>
+        <div class="bar-label">${escapeHtml(label)}</div>
       </div>
     `;
   }).join('');
@@ -881,7 +881,7 @@ function updateCosts() {
         const date = new Date(days[i]);
         const label = date.toLocaleDateString('en', { month: 'short', day: 'numeric' });
         const color = getDotColor(v);
-        return `<circle cx="${x}" cy="${y}" r="6" fill="${color}" stroke="var(--bg-card)" stroke-width="2" style="cursor:pointer;filter:drop-shadow(0 0 4px ${color}40);"><title>${label}: $${v.toFixed(2)}</title></circle>`;
+        return `<circle cx="${x}" cy="${y}" r="6" fill="${color}" stroke="var(--bg-card)" stroke-width="2" style="cursor:pointer;filter:drop-shadow(0 0 4px ${color}40);"><title>${escapeHtml(label)}: $${v.toFixed(2)}</title></circle>`;
       }).join('');
       
       // Show all labels for small datasets, sparse for larger
@@ -891,13 +891,13 @@ function updateCosts() {
         const x = count > 1 ? pad + i * xStep : w / 2;
         const date = new Date(d);
         const label = date.toLocaleDateString('en', { month: 'short', day: 'numeric' });
-        return `<text x="${x}" y="${h - 15}" fill="var(--text-secondary)" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">${label}</text>`;
+        return `<text x="${x}" y="${h - 15}" fill="var(--text-secondary)" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">${escapeHtml(label)}</text>`;
       }).join('');
       
       const yTicks = [0, maxVal / 2, maxVal].map((val, i) => {
         const y = h - pad - (i / 2) * (h - pad * 2);
         const formattedVal = val >= 1 ? '$' + val.toFixed(2) : val >= 0.1 ? '$' + val.toFixed(2) : '$' + val.toFixed(3);
-        return `<text x="${pad - 10}" y="${y + 4}" fill="var(--text-secondary)" font-size="11" text-anchor="end" font-family="JetBrains Mono, monospace">${formattedVal}</text>
+        return `<text x="${pad - 10}" y="${y + 4}" fill="var(--text-secondary)" font-size="11" text-anchor="end" font-family="JetBrains Mono, monospace">${escapeHtml(formattedVal)}</text>
           <line x1="${pad}" y1="${y}" x2="${w - pad}" y2="${y}" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4" opacity="0.5"/>`;
       }).join('');
       

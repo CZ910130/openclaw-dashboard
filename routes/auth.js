@@ -4,7 +4,7 @@ const {
   createSession, validatePassword, safeCompare,
   base32Encode, verifyTOTP,
   auditLog, checkRateLimit, recordFailedAuth, clearFailedAuth,
-  isAuthenticated
+  isAuthenticated, parseCookies
 } = require('../lib/auth');
 const { setSecurityHeaders, setSameSiteCORS, getClientIP } = require('../lib/http');
 
@@ -160,8 +160,8 @@ function handle(req, res, ctx) {
 
   if (req.url === '/api/auth/reset-password' && req.method === 'POST') {
     const ip = getClientIP(req);
-    // Rate limit: 3 attempts per 10 minutes for password reset
-    if (checkRateLimit(ctx.rateLimitStore, ip, 3, 600000)) {
+    const resetLimit = checkRateLimit(ctx.rateLimitStore, ip);
+    if (resetLimit.softLocked) {
       auditLog(ctx.auditLogPath, 'password_reset_rate_limited', ip);
       res.writeHead(429, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Too many attempts. Please try again later.' }));
