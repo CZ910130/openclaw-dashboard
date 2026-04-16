@@ -8,6 +8,7 @@ const { parseCookies } = require('../lib/auth');
 
 const MAX_FILE_BODY = 1024 * 1024;
 const OPENCLAW_BIN = process.env.OPENCLAW_BIN || '/home/qq1028280994/.npm-global/bin/openclaw';
+const FILE_LIST_CACHE_TTL_MS = 5000;
 
 function buildKeyFilesAllowed(ctx) {
   const { WORKSPACE_DIR, workspaceFilenames, skillsDir, configFiles } = ctx;
@@ -229,13 +230,21 @@ function handle(req, res, ctx) {
 
   // GET /api/memory (alias for memory-files)
   if (req.url === '/api/memory' && req.method === 'GET') {
-    sendJson(req, res, getMemoryFiles(ctx));
+    const now = Date.now();
+    if (!ctx.apiRouteCache.memoryFiles || now - ctx.apiRouteCache.memoryFiles.time > FILE_LIST_CACHE_TTL_MS) {
+      ctx.apiRouteCache.memoryFiles = { time: now, data: getMemoryFiles(ctx) };
+    }
+    sendJson(req, res, ctx.apiRouteCache.memoryFiles.data);
     return true;
   }
 
   // GET /api/memory-files
   if (req.url === '/api/memory-files' && req.method === 'GET') {
-    sendJson(req, res, getMemoryFiles(ctx));
+    const now = Date.now();
+    if (!ctx.apiRouteCache.memoryFiles || now - ctx.apiRouteCache.memoryFiles.time > FILE_LIST_CACHE_TTL_MS) {
+      ctx.apiRouteCache.memoryFiles = { time: now, data: getMemoryFiles(ctx) };
+    }
+    sendJson(req, res, ctx.apiRouteCache.memoryFiles.data);
     return true;
   }
 
@@ -267,45 +276,49 @@ function handle(req, res, ctx) {
 
   // GET /api/key-files
   if (req.url === '/api/key-files' && req.method === 'GET') {
-    const files = [];
-    for (const fname of workspaceFilenames) {
-      const fpath = path.join(WORKSPACE_DIR, fname);
-      try {
-        if (fs.existsSync(fpath)) {
-          const stat = fs.statSync(fpath);
-          files.push({ name: fname, modified: stat.mtimeMs, size: stat.size, editable: true });
-        }
-      } catch {}
-    }
-    try {
-      if (fs.existsSync(skillsDir)) {
-        const entries = fs.readdirSync(skillsDir).sort();
-        for (const e of entries) {
-          const entryPath = path.join(skillsDir, e);
-          try {
-            const stat = fs.statSync(entryPath);
-            if (stat.isDirectory()) {
-              const skillMd = path.join(entryPath, 'SKILL.md');
-              if (fs.existsSync(skillMd)) {
-                const fstat = fs.statSync(skillMd);
-                files.push({ name: 'skills/' + e + '/SKILL.md', modified: fstat.mtimeMs, size: fstat.size, editable: true });
-              }
-            } else if (e.endsWith('.md')) {
-              files.push({ name: 'skills/' + e, modified: stat.mtimeMs, size: stat.size, editable: true });
-            }
-          } catch {}
-        }
+    const now = Date.now();
+    if (!ctx.apiRouteCache.keyFiles || now - ctx.apiRouteCache.keyFiles.time > FILE_LIST_CACHE_TTL_MS) {
+      const files = [];
+      for (const fname of workspaceFilenames) {
+        const fpath = path.join(WORKSPACE_DIR, fname);
+        try {
+          if (fs.existsSync(fpath)) {
+            const stat = fs.statSync(fpath);
+            files.push({ name: fname, modified: stat.mtimeMs, size: stat.size, editable: true });
+          }
+        } catch {}
       }
-    } catch {}
-    for (const cf of configFiles) {
       try {
-        if (fs.existsSync(cf.path)) {
-          const stat = fs.statSync(cf.path);
-          files.push({ name: cf.name, modified: stat.mtimeMs, size: stat.size, editable: !READ_ONLY_FILES.has(cf.name) });
+        if (fs.existsSync(skillsDir)) {
+          const entries = fs.readdirSync(skillsDir).sort();
+          for (const e of entries) {
+            const entryPath = path.join(skillsDir, e);
+            try {
+              const stat = fs.statSync(entryPath);
+              if (stat.isDirectory()) {
+                const skillMd = path.join(entryPath, 'SKILL.md');
+                if (fs.existsSync(skillMd)) {
+                  const fstat = fs.statSync(skillMd);
+                  files.push({ name: 'skills/' + e + '/SKILL.md', modified: fstat.mtimeMs, size: fstat.size, editable: true });
+                }
+              } else if (e.endsWith('.md')) {
+                files.push({ name: 'skills/' + e, modified: stat.mtimeMs, size: stat.size, editable: true });
+              }
+            } catch {}
+          }
         }
       } catch {}
+      for (const cf of configFiles) {
+        try {
+          if (fs.existsSync(cf.path)) {
+            const stat = fs.statSync(cf.path);
+            files.push({ name: cf.name, modified: stat.mtimeMs, size: stat.size, editable: !READ_ONLY_FILES.has(cf.name) });
+          }
+        } catch {}
+      }
+      ctx.apiRouteCache.keyFiles = { time: now, data: files };
     }
-    sendJson(req, res, files);
+    sendJson(req, res, ctx.apiRouteCache.keyFiles.data);
     return true;
   }
 
@@ -378,6 +391,7 @@ function handle(req, res, ctx) {
         const tmp = fpath + '.tmp.' + Date.now();
         fs.writeFileSync(tmp, content, 'utf8');
         fs.renameSync(tmp, fpath);
+        if (typeof clearCaches === 'function') clearCaches();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true }));
       } catch (e) {

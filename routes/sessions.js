@@ -8,6 +8,60 @@ const { sendJson } = require('../lib/http');
 function isSessionFile(f) { return f.endsWith('.jsonl') || f.includes('.jsonl.reset.'); }
 function extractSessionId(f) { return f.replace(/\.jsonl(?:\.reset\.\d+)?$/, ''); }
 
+const SESSION_FILE_INDEX_TTL_MS = 5000;
+const LAST_MESSAGE_CACHE_TTL_MS = 15000;
+const SESSION_MESSAGES_CACHE_TTL_MS = 5000;
+
+let sessionFileIndexCache = { sessDir: '', time: 0, files: [] };
+const lastMessageCache = new Map();
+const sessionMessagesCache = new Map();
+const sessionCostCache = new Map();
+
+function getFileSignature(stat) {
+  return `${stat.size}:${stat.mtimeMs}`;
+}
+
+function getSessionFileIndex(sessDir) {
+  const now = Date.now();
+  if (sessionFileIndexCache.sessDir === sessDir && now - sessionFileIndexCache.time < SESSION_FILE_INDEX_TTL_MS) {
+    return sessionFileIndexCache.files;
+  }
+  try {
+    const files = fs.readdirSync(sessDir)
+      .filter(f => isSessionFile(f))
+      .map(file => {
+        const filePath = path.join(sessDir, file);
+        try {
+          const stat = fs.statSync(filePath);
+          return {
+            file,
+            filePath,
+            sessionId: extractSessionId(file),
+            size: stat.size,
+            mtimeMs: stat.mtimeMs,
+            signature: getFileSignature(stat)
+          };
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+    sessionFileIndexCache = { sessDir, time: now, files };
+    return files;
+  } catch {
+    sessionFileIndexCache = { sessDir, time: now, files: [] };
+    return [];
+  }
+}
+
+function findPrimarySessionFile(sessDir, sessionId) {
+  const exactName = sessionId + '.jsonl';
+  const files = getSessionFileIndex(sessDir);
+  return files.find(entry => entry.file === exactName)
+    || files.find(entry => entry.sessionId === sessionId)
+    || null;
+}
+
 async function tailRead(filePath, bytes = 8192) {
   try {
     const stat = await fsp.stat(filePath);
@@ -29,9 +83,16 @@ async function tailRead(filePath, bytes = 8192) {
   } catch { return ''; }
 }
 
-async function getLastMessage(sessDir, sessionId) {
+async function getLastMessage(sessDir, sessionId, fileEntry = null) {
   try {
-    const filePath = path.join(sessDir, sessionId + '.jsonl');
+    const target = fileEntry || findPrimarySessionFile(sessDir, sessionId);
+    const filePath = target ? target.filePath : path.join(sessDir, sessionId + '.jsonl');
+    const cacheKey = target ? `${filePath}:${target.signature}` : null;
+    const now = Date.now();
+    if (cacheKey) {
+      const cached = lastMessageCache.get(cacheKey);
+      if (cached && now - cached.time < LAST_MESSAGE_CACHE_TTL_MS) return cached.value;
+    }
     const tail = await tailRead(filePath, 16384);
     if (!tail) return '';
     const lines = tail.split('\n').filter(l => l.trim());
@@ -51,41 +112,42 @@ async function getLastMessage(sessDir, sessionId) {
             if (b.type === 'text' && b.text) { text = b.text; break; }
           }
         }
-        if (text) return text.replace(/\n/g, ' ').substring(0, 80);
+        if (text) {
+          const value = text.replace(/\n/g, ' ').substring(0, 80);
+          if (cacheKey) lastMessageCache.set(cacheKey, { time: now, value });
+          return value;
+        }
       } catch {}
     }
+    if (cacheKey) lastMessageCache.set(cacheKey, { time: now, value: '' });
     return '';
   } catch { return ''; }
 }
 
-let sessionCostCache = {};
-let sessionCostCacheTime = 0;
-
 function getSessionCost(sessDir, sessionId, MODEL_PRICING) {
-  const now = Date.now();
-  if (now - sessionCostCacheTime > 60000) {
-    sessionCostCache = {};
-    sessionCostCacheTime = now;
-    try {
-      const files = fs.readdirSync(sessDir).filter(f => isSessionFile(f));
-      for (const file of files) {
-        const sid = extractSessionId(file);
-        let total = 0;
-        const lines = fs.readFileSync(path.join(sessDir, file), 'utf8').split('\n');
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const d = JSON.parse(line);
-            if (d.type !== 'message') continue;
-            const c = estimateMsgCost(d.message || {});
-            if (c > 0) total += c;
-          } catch {}
-        }
-        if (total > 0) sessionCostCache[sid] = Math.round(total * 100) / 100;
-      }
-    } catch {}
-  }
-  return sessionCostCache[sessionId] || 0;
+  const target = findPrimarySessionFile(sessDir, sessionId);
+  if (!target) return 0;
+  const cacheKey = `${target.filePath}:${target.signature}`;
+  const cached = sessionCostCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  let total = 0;
+  try {
+    const lines = fs.readFileSync(target.filePath, 'utf8').split('\n');
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const d = JSON.parse(line);
+        if (d.type !== 'message') continue;
+        const c = estimateMsgCost(d.message || {});
+        if (c > 0) total += c;
+      } catch {}
+    }
+  } catch {}
+
+  const rounded = Math.round(total * 100) / 100;
+  sessionCostCache.set(cacheKey, rounded);
+  return rounded;
 }
 
 function resolveName(key, cronFile) {
@@ -118,9 +180,16 @@ async function getSessionsJson(sessDir, cronFile, MODEL_PRICING) {
     const sFile = path.join(sessDir, 'sessions.json');
     const raw = await fsp.readFile(sFile, 'utf8');
     const data = JSON.parse(raw);
+    const sessionFileMap = new Map();
+    for (const entry of getSessionFileIndex(sessDir)) {
+      if (!sessionFileMap.has(entry.sessionId) || entry.file === `${entry.sessionId}.jsonl`) {
+        sessionFileMap.set(entry.sessionId, entry);
+      }
+    }
     const entries = Object.entries(data);
     const results = await Promise.all(entries.map(async ([key, s]) => {
       const sid = s.sessionId || key;
+      const fileEntry = sessionFileMap.get(sid) || null;
       return {
         key,
         label: s.label || resolveName(key, cronFile),
@@ -134,7 +203,7 @@ async function getSessionsJson(sessDir, cronFile, MODEL_PRICING) {
         thinkingLevel: s.thinkingLevel || null,
         channel: s.channel || '-',
         sessionId: s.sessionId || '-',
-        lastMessage: await getLastMessage(sessDir, sid),
+        lastMessage: await getLastMessage(sessDir, sid, fileEntry),
         cost: getSessionCost(sessDir, sid, MODEL_PRICING)
       };
     }));
@@ -583,36 +652,46 @@ function handle(req, res, ctx) {
     const sessionId = rawId.replace(/[^a-zA-Z0-9\-_:.]/g, '');
     const messages = [];
     try {
-      const files = fs.readdirSync(ctx.sessDir).filter(f => isSessionFile(f));
-      let targetFile = files.find(f => f.includes(sessionId));
-      if (!targetFile) {
+      const files = getSessionFileIndex(ctx.sessDir);
+      let targetEntry = files.find(f => f.file.includes(sessionId) || f.sessionId === sessionId) || null;
+      if (!targetEntry) {
         const sFile = path.join(ctx.sessDir, 'sessions.json');
         const data = JSON.parse(fs.readFileSync(sFile, 'utf8'));
         for (const [k, v] of Object.entries(data)) {
           if (k === sessionId && v.sessionId) {
-            targetFile = files.find(f => f.includes(v.sessionId));
+            targetEntry = files.find(f => f.file.includes(v.sessionId) || f.sessionId === v.sessionId) || null;
             break;
           }
         }
       }
-      if (targetFile) {
-        const lines = fs.readFileSync(path.join(ctx.sessDir, targetFile), 'utf8').split('\n').filter(l => l.trim());
-        for (let i = Math.max(0, lines.length - 30); i < lines.length; i++) {
-          try {
-            const d = JSON.parse(lines[i]);
-            if (d.type !== 'message') continue;
-            const msg = d.message;
-            if (!msg) continue;
-            let text = '';
-            if (typeof msg.content === 'string') text = msg.content;
-            else if (Array.isArray(msg.content)) {
-              for (const b of msg.content) {
-                if (b.type === 'text' && b.text) { text = b.text; break; }
-                if (b.type === 'tool_use' || b.type === 'toolCall') { text = '🔧 ' + (b.name || b.toolName || 'tool'); break; }
+      if (targetEntry) {
+        const cacheKey = `${targetEntry.filePath}:${targetEntry.signature}:30`;
+        const now = Date.now();
+        const cached = sessionMessagesCache.get(cacheKey);
+        if (cached && now - cached.time < SESSION_MESSAGES_CACHE_TTL_MS) {
+          messages.push(...cached.value);
+        } else {
+          const parsedMessages = [];
+          const lines = fs.readFileSync(targetEntry.filePath, 'utf8').split('\n').filter(l => l.trim());
+          for (let i = Math.max(0, lines.length - 30); i < lines.length; i++) {
+            try {
+              const d = JSON.parse(lines[i]);
+              if (d.type !== 'message') continue;
+              const msg = d.message;
+              if (!msg) continue;
+              let text = '';
+              if (typeof msg.content === 'string') text = msg.content;
+              else if (Array.isArray(msg.content)) {
+                for (const b of msg.content) {
+                  if (b.type === 'text' && b.text) { text = b.text; break; }
+                  if (b.type === 'tool_use' || b.type === 'toolCall') { text = '🔧 ' + (b.name || b.toolName || 'tool'); break; }
+                }
               }
-            }
-            if (text) messages.push({ role: msg.role || 'unknown', content: text.substring(0, 300), timestamp: d.timestamp || '' });
-          } catch {}
+              if (text) parsedMessages.push({ role: msg.role || 'unknown', content: text.substring(0, 300), timestamp: d.timestamp || '' });
+            } catch {}
+          }
+          sessionMessagesCache.set(cacheKey, { time: now, value: parsedMessages });
+          messages.push(...parsedMessages);
         }
       }
     } catch {}
@@ -622,21 +701,33 @@ function handle(req, res, ctx) {
   }
 
   if (req.url === '/api/tokens-today') {
+    const now = Date.now();
+    if (!ctx.sessionStatsCache.tokensToday || now - ctx.sessionStatsCache.tokensToday.time > 10000) {
+      ctx.sessionStatsCache.tokensToday = { time: now, data: getTodayTokens(ctx.sessDir) };
+    }
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(getTodayTokens(ctx.sessDir)));
+    res.end(JSON.stringify(ctx.sessionStatsCache.tokensToday.data));
     return true;
   }
 
   if (req.url === '/api/response-time') {
+    const now = Date.now();
+    if (!ctx.sessionStatsCache.responseTime || now - ctx.sessionStatsCache.responseTime.time > 10000) {
+      ctx.sessionStatsCache.responseTime = { time: now, data: { avgSeconds: getAvgResponseTime(ctx.sessDir) } };
+    }
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ avgSeconds: getAvgResponseTime(ctx.sessDir) }));
+    res.end(JSON.stringify(ctx.sessionStatsCache.responseTime.data));
     return true;
   }
 
   if (req.url === '/api/lifetime-stats') {
+    const now = Date.now();
+    if (!ctx.sessionStatsCache.lifetime || now - ctx.sessionStatsCache.lifetime.time > 300000) {
+      ctx.sessionStatsCache.lifetime = { time: now, data: getLifetimeStats(ctx.sessDir, ctx.MODEL_PRICING) };
+    }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     try {
-      res.end(JSON.stringify(getLifetimeStats(ctx.sessDir, ctx.MODEL_PRICING)));
+      res.end(JSON.stringify(ctx.sessionStatsCache.lifetime.data));
     } catch (e) {
       res.end(JSON.stringify({ totalTokens: 0, totalMessages: 0, totalCost: 0, totalSessions: 0, firstSessionDate: null, daysActive: 0 }));
     }
@@ -656,6 +747,7 @@ module.exports = {
   getTodayTokens,
   getAvgResponseTime,
   getLifetimeStats,
+  getSessionFileIndex,
   formatLiveEvent: null // will be set below
 };
 

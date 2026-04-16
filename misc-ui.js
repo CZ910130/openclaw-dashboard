@@ -887,6 +887,72 @@ function initMiscUi() {
     document.body.dataset.boundMiscUi = 'true';
     document.addEventListener('keydown', handleGlobalShortcutKeydown);
   }
+
+  ['feedSessionFilter', 'feedRoleFilter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.dataset.boundChange !== 'true') {
+      el.dataset.boundChange = 'true';
+      el.addEventListener('change', applyFeedFilter);
+    }
+  });
+
+  const feedSearchClearBtn = document.getElementById('feedSearchClearBtn');
+  if (feedSearchClearBtn && feedSearchClearBtn.dataset.boundClick !== 'true') {
+    feedSearchClearBtn.dataset.boundClick = 'true';
+    feedSearchClearBtn.addEventListener('click', clearFeedSearch);
+  }
+
+  const feedClearBtn = document.getElementById('feedClearBtn');
+  if (feedClearBtn && feedClearBtn.dataset.boundClick !== 'true') {
+    feedClearBtn.dataset.boundClick = 'true';
+    feedClearBtn.addEventListener('click', () => {
+      const feedStream = document.getElementById('feedStream');
+      if (feedStream) feedStream.innerHTML = '';
+    });
+  }
+
+  const keyFilesRefreshBtn = document.getElementById('keyFilesRefreshBtn');
+  if (keyFilesRefreshBtn && keyFilesRefreshBtn.dataset.boundClick !== 'true') {
+    keyFilesRefreshBtn.dataset.boundClick = 'true';
+    keyFilesRefreshBtn.addEventListener('click', window.fetchKeyFiles);
+  }
+
+  [
+    ['keyFileEditBtn', window.editKeyFile],
+    ['keyFileSaveBtn', window.saveKeyFile],
+    ['keyFileCancelBtn', window.cancelEditKeyFile],
+    ['logsRefreshBtn', fetchLogs],
+    ['sessionModalCloseBtn', closeSessionModal]
+  ].forEach(([id, handler]) => {
+    const el = document.getElementById(id);
+    if (el && el.dataset.boundClick !== 'true') {
+      el.dataset.boundClick = 'true';
+      el.addEventListener('click', handler);
+    }
+  });
+
+  const logAutoRefresh = document.getElementById('logAutoRefresh');
+  if (logAutoRefresh && logAutoRefresh.dataset.boundChange !== 'true') {
+    logAutoRefresh.dataset.boundChange = 'true';
+    logAutoRefresh.addEventListener('change', (event) => toggleLogAutoRefresh(event.target.checked));
+  }
+
+  const shortcutsOverlay = document.getElementById('shortcutsOverlay');
+  if (shortcutsOverlay && shortcutsOverlay.dataset.boundClick !== 'true') {
+    shortcutsOverlay.dataset.boundClick = 'true';
+    shortcutsOverlay.addEventListener('click', (event) => {
+      if (event.target === shortcutsOverlay) toggleShortcuts();
+    });
+  }
+
+  const sessionModal = document.getElementById('sessionModal');
+  if (sessionModal && sessionModal.dataset.boundClick !== 'true') {
+    sessionModal.dataset.boundClick = 'true';
+    sessionModal.addEventListener('click', (event) => {
+      if (event.target === sessionModal) closeSessionModal();
+    });
+  }
+
   bindFeedSearchInput();
   fetchTailscaleStatus();
   fetchLifetimeStats();

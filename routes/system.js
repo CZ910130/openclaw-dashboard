@@ -5,19 +5,38 @@ const { execSync, exec } = require('child_process');
 const { sendJson, auditLog, getClientIP, safePath } = require('../lib/utils');
 const { getSystemStats } = require('../lib/stats');
 
+const SYSTEM_STATS_TTL_MS = 5000;
+const SERVICES_TTL_MS = 5000;
+const TAILSCALE_TTL_MS = 10000;
+const NOTIFICATIONS_TTL_MS = 3000;
+
+let diskHistoryCache = { loaded: false, history: [] };
+let servicesStatusCache = { time: 0, data: null };
+let tailscaleCache = { time: 0, data: null };
+const notificationsCache = new Map();
+
 function trackDiskHistory(diskPercent) {
   const histFile = path.join(__dirname, '..', 'disk-history.json');
-  let history = [];
-  try { history = JSON.parse(fs.readFileSync(histFile, 'utf8')); } catch {}
+  if (!diskHistoryCache.loaded) {
+    try { diskHistoryCache.history = JSON.parse(fs.readFileSync(histFile, 'utf8')); } catch { diskHistoryCache.history = []; }
+    diskHistoryCache.loaded = true;
+  }
+  let history = diskHistoryCache.history;
   const now = Date.now();
   if (history.length > 0 && now - history[history.length - 1].t < 1800000) return history;
-  history.push({ t: now, v: diskPercent });
+  history = [...history, { t: now, v: diskPercent }];
   if (history.length > 48) history = history.slice(-48);
+  diskHistoryCache.history = history;
   try { fs.writeFileSync(histFile, JSON.stringify(history)); } catch {}
   return history;
 }
 
 function getServicesStatus() {
+  const now = Date.now();
+  if (servicesStatusCache.data && now - servicesStatusCache.time < SERVICES_TTL_MS) {
+    return servicesStatusCache.data;
+  }
+
   const services = ['openclaw', 'agent-dashboard', 'tailscaled'];
 
   const safePattern = (s) => /^[\w.\-\\/\[\]:space()^$|+]+$/.test(s);
@@ -66,7 +85,7 @@ function getServicesStatus() {
       }
     };
 
-    return services.map(name => {
+    const result = services.map(name => {
       const detector = serviceDetectors[name];
       if (!detector) return { name, active: false };
 
@@ -75,8 +94,7 @@ function getServicesStatus() {
 
       const activeByProcess = detector.processes.some(hasProcess);
       if (activeByProcess) return { name, active: true };
-      
-      // Check port if specified (for agent-dashboard on port 7000)
+
       if (detector.portCheck) {
         try {
           const { host, port } = detector.portCheck;
@@ -84,9 +102,11 @@ function getServicesStatus() {
           return { name, active: true };
         } catch {}
       }
-      
+
       return { name, active: false };
     });
+    servicesStatusCache = { time: now, data: result };
+    return result;
   }
 
   if (os.platform() === 'darwin') {
@@ -124,14 +144,18 @@ function getServicesStatus() {
       label === 'openclaw' || label.includes('openclaw')
     );
 
-    return services.map(name => {
+    const result = services.map(name => {
       if (name === 'agent-dashboard') return { name, active: agentDashboardActive };
       if (name === 'tailscaled') return { name, active: tailscaledActive };
       return { name, active: openclawActive };
     });
+    servicesStatusCache = { time: now, data: result };
+    return result;
   }
 
-  return services.map(name => ({ name, active: null }));
+  const fallback = services.map(name => ({ name, active: null }));
+  servicesStatusCache = { time: now, data: fallback };
+  return fallback;
 }
 
 function handle(req, res, ctx) {
@@ -139,9 +163,13 @@ function handle(req, res, ctx) {
   const ip = getClientIP(req);
 
   if (req.url === '/api/system') {
-    const stats = getSystemStats();
-    if (stats.disk) stats.diskHistory = trackDiskHistory(stats.disk.percent || 0);
-    sendJson(req, res, stats);
+    const now = Date.now();
+    if (!ctx.systemRouteCache.system || now - ctx.systemRouteCache.system.time > SYSTEM_STATS_TTL_MS) {
+      const stats = getSystemStats();
+      if (stats.disk) stats.diskHistory = trackDiskHistory(stats.disk.percent || 0);
+      ctx.systemRouteCache.system = { time: now, data: stats };
+    }
+    sendJson(req, res, ctx.systemRouteCache.system.data);
     return true;
   }
 
@@ -159,6 +187,11 @@ function handle(req, res, ctx) {
 
   if (req.url === '/api/tailscale') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
+    const now = Date.now();
+    if (tailscaleCache.data && now - tailscaleCache.time < TAILSCALE_TTL_MS) {
+      res.end(JSON.stringify(tailscaleCache.data));
+      return true;
+    }
     try {
       const statusJson = execSync('tailscale status --json 2>/dev/null', { encoding: 'utf8', timeout: 5000 });
       const status = JSON.parse(statusJson);
@@ -171,15 +204,20 @@ function handle(req, res, ctx) {
           routes = serveStatus.split('\n').filter(l => l.includes('http')).map(l => l.trim());
         }
       } catch {}
-      res.end(JSON.stringify({
-        hostname: self.HostName || 'unknown',
-        ip: self.TailscaleIPs?.[0] || 'unknown',
-        online: self.Online || false,
-        peers,
-        routes
-      }));
+      tailscaleCache = {
+        time: now,
+        data: {
+          hostname: self.HostName || 'unknown',
+          ip: self.TailscaleIPs?.[0] || 'unknown',
+          online: self.Online || false,
+          peers,
+          routes
+        }
+      };
+      res.end(JSON.stringify(tailscaleCache.data));
     } catch (e) {
-      res.end(JSON.stringify({ error: 'Tailscale not available', hostname: '--', ip: '--', online: false, peers: 0, routes: [] }));
+      tailscaleCache = { time: now, data: { error: 'Tailscale not available', hostname: '--', ip: '--', online: false, peers: 0, routes: [] } };
+      res.end(JSON.stringify(tailscaleCache.data));
     }
     return true;
   }
@@ -228,9 +266,21 @@ function handle(req, res, ctx) {
   if (req.url.startsWith('/api/notifications')) {
     const limit = parseInt(new URL(req.url, 'http://localhost').searchParams.get('limit') || '50');
     try {
+      const cappedLimit = Math.min(limit, 200);
+      const stat = fs.statSync(auditLogPath);
+      const cacheKey = `${auditLogPath}:${stat.size}:${stat.mtimeMs}:${cappedLimit}`;
+      const now = Date.now();
+      const cached = notificationsCache.get(cacheKey);
+      if (cached && now - cached.time < NOTIFICATIONS_TTL_MS) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ events: cached.events }));
+        return true;
+      }
       const raw = fs.readFileSync(auditLogPath, 'utf8').trim();
-      const lines = raw.split('\n').filter(Boolean).slice(-Math.min(limit, 200));
+      const lines = raw.split('\n').filter(Boolean).slice(-cappedLimit);
       const events = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean).reverse();
+      notificationsCache.clear();
+      notificationsCache.set(cacheKey, { time: now, events });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ events }));
     } catch(e) { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ events: [] })); }

@@ -57,12 +57,23 @@ const MODEL_PRICING = loadModelPricing();
 // --- Caches ---
 const usageCache = { data: null, time: 0 };
 const costCache = { data: null, time: 0 };
+const sessionStatsCache = { tokensToday: null, responseTime: null, lifetime: null };
+const systemRouteCache = { system: null };
+const apiRouteCache = { memoryFiles: null, keyFiles: null };
+const staticFileCache = new Map();
 
 function clearCaches() {
   usageCache.data = null;
   usageCache.time = 0;
   costCache.data = null;
   costCache.time = 0;
+  sessionStatsCache.tokensToday = null;
+  sessionStatsCache.responseTime = null;
+  sessionStatsCache.lifetime = null;
+  systemRouteCache.system = null;
+  apiRouteCache.memoryFiles = null;
+  apiRouteCache.keyFiles = null;
+  staticFileCache.clear();
 }
 
 // --- API Rate Limiting ---
@@ -178,7 +189,7 @@ let liveWatcher = null;
 const _fileWatchers = {};
 const _fileSizes = {};
 
-const { isSessionFile, formatLiveEvent } = sessionRoutes;
+const { isSessionFile, formatLiveEvent, getSessionFileIndex } = sessionRoutes;
 
 function broadcastLiveEvent(data) {
   if (liveClients.length === 0) return;
@@ -186,6 +197,21 @@ function broadcastLiveEvent(data) {
   if (!event) return;
   const message = `data: ${JSON.stringify(event)}\n\n`;
   liveClients.forEach(res => { try { res.write(message); } catch {} });
+}
+
+function readStaticFileCached(file) {
+  try {
+    const stat = fs.statSync(file);
+    const cacheKey = `${file}:${stat.size}:${stat.mtimeMs}`;
+    const cached = staticFileCache.get(cacheKey);
+    if (cached) return cached;
+    const content = fs.readFileSync(file, 'utf8');
+    staticFileCache.clear();
+    staticFileCache.set(cacheKey, content);
+    return content;
+  } catch {
+    return null;
+  }
 }
 
 function watchSessionFile(file) {
@@ -215,7 +241,7 @@ function watchSessionFile(file) {
 function startLiveWatcher() {
   if (liveWatcher) return;
   try {
-    fs.readdirSync(sessDir).filter(f => isSessionFile(f)).forEach(watchSessionFile);
+    getSessionFileIndex(sessDir).forEach(entry => watchSessionFile(entry.file));
     liveWatcher = fs.watch(sessDir, (eventType, filename) => {
       if (filename && isSessionFile(filename) && !_fileWatchers[filename]) {
         try { if (fs.existsSync(path.join(sessDir, filename))) watchSessionFile(filename); } catch {}
@@ -233,7 +259,7 @@ const ctx = {
   sessions, rateLimitStore, pendingMfaSecrets, csrfTokens,
   DASHBOARD_TOKEN, MFA_SECRET, MODEL_PRICING,
   // Caches
-  usageCache, costCache,
+  usageCache, costCache, sessionStatsCache, systemRouteCache, apiRouteCache,
   clearCaches,
   // Health
   healthHistory,
@@ -289,7 +315,8 @@ const server = http.createServer((req, res) => {
   // Static files
   if (req.url === '/' || req.url === '/index.html') {
     try {
-      const html = fs.readFileSync(htmlPath, 'utf8');
+      const html = readStaticFileCached(htmlPath);
+      if (html == null) throw new Error('missing html');
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(html);
     } catch { res.writeHead(500); res.end('Error loading dashboard'); }
@@ -299,7 +326,8 @@ const server = http.createServer((req, res) => {
   if (staticFiles[staticKey]) {
     const { file, type } = staticFiles[staticKey];
     try {
-      const content = fs.readFileSync(file, 'utf8');
+      const content = readStaticFileCached(file);
+      if (content == null) throw new Error('missing static file');
       sendCompressed(req, res, 200, type, content);
     } catch { res.writeHead(404); res.end('Not found'); }
     return;
@@ -342,7 +370,8 @@ const server = http.createServer((req, res) => {
   } else {
     // Non-API fallback: serve index.html (SPA)
     try {
-      const html = fs.readFileSync(htmlPath, 'utf8');
+      const html = readStaticFileCached(htmlPath);
+      if (html == null) throw new Error('missing html');
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(html);
     } catch { res.writeHead(500); res.end('Error loading dashboard'); }
