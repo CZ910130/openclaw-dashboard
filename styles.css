@@ -3077,6 +3077,10 @@ body.light-theme .notif-panel { background: #ffffff; border-color: #d1d1d6; box-
   border-left: 4px solid var(--blue);
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), var(--bg-card));
 }
+.toast.error {
+  border-left: 4px solid var(--red, #ef4444);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), var(--bg-card));
+}
 
 .toast-icon {
   font-size: 24px;

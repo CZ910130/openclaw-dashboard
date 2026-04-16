@@ -428,7 +428,7 @@ function showToast(message, type = 'info', duration = 4000) {
   const container = document.getElementById('toastContainer');
   if (!container) return;
 
-  const icons = { success: '✅', warning: '⚠️', info: 'ℹ️' };
+  const icons = { success: '✅', warning: '⚠️', info: 'ℹ️', error: '❌' };
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
 
@@ -850,25 +850,25 @@ toggleSessionExpand = function(key, e) {
     const s = sessions.find(x => x.key === key);
     if (!s || !s.createdAt) return;
     
-    const detail = document.getElementById('expanded-' + CSS.escape(key));
+    const detail = document.getElementById('expanded-' + key);
     if (!detail) return;
-    
+
     const now = s.updatedAt || Date.now();
     const duration = now - s.createdAt;
-    
+
     const days = Math.floor(duration / 86400000);
     const hours = Math.floor((duration % 86400000) / 3600000);
     const mins = Math.floor((duration % 3600000) / 60000);
-    
+
     let durStr = '';
     if (days > 0) durStr = `${days}d ${hours}h`;
     else if (hours > 0) durStr = `${hours}h ${mins}m`;
     else durStr = `${mins}m`;
-    
-    const grid = detail.querySelector('div[style*="display:grid"]');
-    if (grid && !document.getElementById('dur-' + CSS.escape(key))) {
+
+    const grid = detail.querySelector('.session-detail-grid');
+    if (grid && !document.getElementById('dur-' + key)) {
       const durDiv = document.createElement('div');
-      durDiv.id = 'dur-' + CSS.escape(key);
+      durDiv.id = 'dur-' + key;
       const label = document.createElement('div');
       label.className = 'session-duration-label';
       label.textContent = 'Duration';

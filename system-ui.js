@@ -110,9 +110,8 @@ async function submitReauth() {
   const errEl = document.getElementById('reauthError');
   if (!pass) { errEl.textContent = 'Password required'; setHiddenState(errEl, false); return; }
   try {
-    const res = await fetch(API_BASE + '/api/reauth', {
+    const res = await authFetch(API_BASE + '/api/reauth', {
       method: 'POST',
-      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pass, totp: totp || undefined })
     });
